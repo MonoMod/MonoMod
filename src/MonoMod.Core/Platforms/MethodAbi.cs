@@ -49,6 +49,11 @@ namespace MonoMod.Core.Platforms
         public int FirstUserArgument { get; } = -1;
 
         /// <summary>
+        /// The number of user arguments in this method ABI.
+        /// </summary>
+        public int UserArgumentCount { get; }
+
+        /// <summary>
         /// <see langword="true"/> if the ABI returns the return buffer parameter.
         /// </summary>
         public bool AbiReturnIsReturnBuffer { get; }
@@ -95,6 +100,12 @@ namespace MonoMod.Core.Platforms
                         if (FirstUserArgument == -1)
                         {
                             FirstUserArgument = i;
+                            UserArgumentCount = 1;
+                        }
+                        else
+                        {
+                            Helpers.Assert(UserArgumentCount == i - FirstUserArgument);
+                            UserArgumentCount++;
                         }
                         break;
 

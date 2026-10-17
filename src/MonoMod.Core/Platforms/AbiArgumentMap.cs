@@ -31,16 +31,30 @@ namespace MonoMod.Core.Platforms
         SpecialArgumentKind TargetArgument,
         int TargetArgumentOffset)
     {
+        /// <summary>
+        /// Constructs an <see cref="AbiArgumentMapElement"/> with a zero <see cref="TargetArgumentOffset"/>.
+        /// </summary>
+        /// <param name="sourceArgument">The source argument kind.</param>
+        /// <param name="targetArgument">The target argument kind to map to.</param>
         public AbiArgumentMapElement(SpecialArgumentKind sourceArgument, SpecialArgumentKind targetArgument)
             : this(sourceArgument, targetArgument, 0)
         {
         }
     }
 
+    /// <summary>
+    /// A mapping which defines how arguments in one <see cref="MethodAbi"/> should be mapepd to arguments in another.
+    /// </summary>
     public sealed class AbiArgumentMap
     {
+        /// <summary>
+        /// The identity mapping, matching each argument exactly, one-for-one.
+        /// </summary>
         public static AbiArgumentMap Identity { get; } = new([]);
 
+        /// <summary>
+        /// The mapping from an instance method to a static method with the first user argument being the <see langword="this"/> argument.
+        /// </summary>
         public static AbiArgumentMap InstanceToStatic { get; } = new([
             new(SpecialArgumentKind.ThisPointer, SpecialArgumentKind.UserArguments, 0),
         ]);
@@ -61,6 +75,10 @@ namespace MonoMod.Core.Platforms
 
         private const int NumArgumentKinds = 1 + (int)SpecialArgumentKind.AsyncContinuation;
 
+        /// <summary>
+        /// Constructs an <see cref="AbiArgumentMap"/> from a set of <see cref="AbiArgumentMapElement"/>s.
+        /// </summary>
+        /// <param name="mapping">The <see cref="AbiArgumentMapElement"/>s defining the mapping.</param>
         public AbiArgumentMap(ReadOnlySpan<AbiArgumentMapElement> mapping)
         {
             sourceToTargetMap = new MappingItem[NumArgumentKinds];
@@ -204,8 +222,217 @@ namespace MonoMod.Core.Platforms
             }
         }
 
-        // TODO: check if a MethodAbi is compatible with the source/target sides, whether a given source abi and target
-        // abi are compatible with each other and end up identity-mapping arg order to match this mapping
+        /// <summary>
+        /// Computes the actual argument mapping for a specific pair of ABIs according to this argument map.
+        /// </summary>
+        /// <remarks>
+        /// <para>If <paramref name="mapping"/> is non-empty, it must contain at least as many elements as <paramref name="targetAbi"/>
+        /// has ABI arguments. When this method returns, each element of <paramref name="mapping"/> will contain the index of the argument
+        /// in <paramref name="sourceAbi"/> corresponding the the argument at that position in <paramref name="targetAbi"/>. If no source
+        /// argument was mapped to that target argument, the <paramref name="mapping"/> element is <c>-1</c>.</para>
+        /// </remarks>
+        /// <param name="sourceAbi">The ABI of the source method.</param>
+        /// <param name="targetAbi">The ABI of the target method.</param>
+        /// <param name="mapping">A span to be filled with the actual mapping indices.</param>
+        /// <returns>The <see cref="AbiArgumentMapResult"/> indicating the status of the mapping.</returns>
+        public AbiArgumentMapResult MapArguments(MethodAbi sourceAbi, MethodAbi targetAbi, Span<int> mapping)
+        {
+            Helpers.ThrowIfArgumentNull(sourceAbi);
+            Helpers.ThrowIfArgumentNull(targetAbi);
 
+            if (mapping.Length != 0)
+            {
+                Helpers.Assert(mapping.Length >= targetAbi.Arguments.Length,
+                    "If mapping span is provided, it must have at least targetAbi.Arguments.Length elements");
+            }
+
+            AbiArgumentMapResult result = 0;
+
+            var srcArgKindsMask = 0;
+            if (sourceAbi.ThisArgument >= 0)
+            {
+                srcArgKindsMask = 1 << (int)SpecialArgumentKind.ThisPointer;
+            }
+            if (sourceAbi.ReturnBufferArgument >= 0)
+            {
+                srcArgKindsMask = 1 << (int)SpecialArgumentKind.ReturnBuffer;
+            }
+            if (sourceAbi.GenericContextArgument >= 0)
+            {
+                srcArgKindsMask = 1 << (int)SpecialArgumentKind.GenericContext;
+            }
+            if (sourceAbi.AsyncContinuationArgument >= 0)
+            {
+                srcArgKindsMask = 1 << (int)SpecialArgumentKind.AsyncContinuation;
+            }
+
+            var srcArgKindsMapped = 0;
+
+            var isIdentity = true;
+            var targetArgs = targetAbi.Arguments.Span;
+            var sourceArgs = sourceAbi.Arguments.Span;
+            for (var i = 0; i < targetArgs.Length; i++)
+            {
+                var tgtArg = targetArgs[i];
+
+                SpecialArgumentKind srcArgKind;
+                var srcArgUserIndex = -1;
+
+                if (tgtArg.Kind is SpecialArgumentKind.UserArguments)
+                {
+                    var userArgIdx = i - targetAbi.FirstUserArgument;
+
+                    if (userArgIdx < targetFromSourceMappedUserArgs.Length)
+                    {
+                        // this target arg is mapped from a source special arg
+                        srcArgKind = targetFromSourceMappedUserArgs[userArgIdx];
+                    }
+                    else
+                    {
+                        // this target arg is mapped implicitly from the source user args
+                        srcArgKind = SpecialArgumentKind.UserArguments;
+                        srcArgUserIndex = userArgIdx - targetFromSourceMappedUserArgs.Length;
+                    }
+                }
+                else
+                {
+                    srcArgKind = targetFromSourceNonUserArgs[(int)tgtArg.Kind];
+                }
+
+                int srcArgIdx;
+                if (srcArgKind is SpecialArgumentKind.UserArguments)
+                {
+                    Helpers.Assert(srcArgUserIndex >= 0);
+                    if (srcArgUserIndex < sourceAbi.UserArgumentCount)
+                    {
+                        srcArgIdx = sourceAbi.FirstUserArgument + srcArgUserIndex;
+                    }
+                    else
+                    {
+                        // source argument is out of bounds
+                        srcArgIdx = -1;
+                    }
+                }
+                else
+                {
+                    srcArgKindsMapped = 1 << (int)srcArgKind;
+                    srcArgIdx = srcArgKind switch
+                    {
+                        SpecialArgumentKind.ThisPointer => sourceAbi.ThisArgument,
+                        SpecialArgumentKind.ReturnBuffer => sourceAbi.ReturnBufferArgument,
+                        SpecialArgumentKind.GenericContext => sourceAbi.GenericContextArgument,
+                        SpecialArgumentKind.AsyncContinuation => sourceAbi.AsyncContinuationArgument,
+                        _ => throw new NotImplementedException($"SpecialArgumentKind.{srcArgKind}"),
+                    };
+                }
+
+                // track whether this is an identity mapping so far
+                if (srcArgIdx != i)
+                {
+                    isIdentity = false;
+                }
+
+                // record the source argument index to the output
+                if (mapping.Length >= i)
+                {
+                    mapping[i] = srcArgIdx;
+                }
+
+                if (srcArgIdx == -1)
+                {
+                    // we weren't able to get a source argument for this target
+                    result |= AbiArgumentMapResult.TargetHasUnboundArguments;
+                    if (tgtArg.Kind is SpecialArgumentKind.UserArguments)
+                    {
+                        result |= AbiArgumentMapResult.TargetHasUnboundUserArguments;
+                    }
+                }
+                else
+                {
+                    // now we check the argument type compatibility
+                    var srcArg = sourceArgs[srcArgIdx];
+
+                    if (!tgtArg.Type.IsCompatible(srcArg.Type))
+                    {
+                        result |= AbiArgumentMapResult.ArgumentTypesIncompatible;
+                    }
+                }
+            }
+
+            if ((srcArgKindsMask & ~srcArgKindsMapped) != 0)
+            {
+                // at least one argument type in the source isn't mapped anywhere in the target
+                result |= AbiArgumentMapResult.SourceHasUnmappedArguments;
+            }
+
+            if (targetArgs.Length < targetFromSourceMappedUserArgs.Length + sourceArgs.Length)
+            {
+                // some source user arguments are guaranteed to not be mapped
+                result |= AbiArgumentMapResult.SourceHasUnmappedArguments | AbiArgumentMapResult.SourceHasUnmappedUserArguments;
+                isIdentity = false;
+            }
+
+            if (isIdentity)
+            {
+                result |= AbiArgumentMapResult.MappingIsIdentity;
+            }
+
+            // a mapping is considered valid if:
+            // 1. there are no incompatible arguments
+            // 2. the target has no unbount arguments
+            if ((result & (AbiArgumentMapResult.TargetHasUnboundArguments | AbiArgumentMapResult.ArgumentTypesIncompatible)) == 0)
+            {
+                result |= AbiArgumentMapResult.MappingIsValid;
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Results of <see cref="AbiArgumentMap.MapArguments(MethodAbi, MethodAbi, Span{int})"/>.
+    /// </summary>
+    [Flags]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1008:Enums should have zero value", Justification = "<Pending>")]
+    public enum AbiArgumentMapResult
+    {
+        /// <summary>
+        /// Default value, representing an invalid result.
+        /// </summary>
+        Invalid = 0,
+        /// <summary>
+        /// The mapping is valid.
+        /// </summary>
+        /// <remarks>
+        /// <para>This is set exactly when the target has no unbount arguments and the target arguments do not have incompatible types.</para>
+        /// </remarks>
+        MappingIsValid = 1 << 0,
+        /// <summary>
+        /// This mapping is the identity mapping.
+        /// </summary>
+        MappingIsIdentity = 1 << 1,
+
+        /// <summary>
+        /// The source has arguments which do not get mapped to anything in the target.
+        /// </summary>
+        SourceHasUnmappedArguments = 1 << 2,
+        /// <summary>
+        /// The target has arguments which are not bound to anything in the source.
+        /// </summary>
+        TargetHasUnboundArguments = 1 << 3,
+
+        /// <summary>
+        /// The source has user arguments which do not get mapped to anything in the target.
+        /// </summary>
+        SourceHasUnmappedUserArguments = 1 << 4,
+        /// <summary>
+        /// The target has arguments which are not bound to anything in the source.
+        /// </summary>
+        TargetHasUnboundUserArguments = 1 << 5,
+
+        /// <summary>
+        /// At least one mapped argument has incompatible types between the source and target.
+        /// </summary>
+        ArgumentTypesIncompatible = 1 << 6,
     }
 }
