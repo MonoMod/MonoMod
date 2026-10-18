@@ -15,6 +15,9 @@ public class RuntimeAsyncInfo(ITestOutputHelper output) : TestBase(output)
     [Fact]
     public void Test()
     {
+        if (!PlatformTriple.Current.SupportedFeatures.Has(RuntimeFeature.HasRuntimeAsync))
+            return;
+
         var method = typeof(RuntimeAsyncInfo).GetMethod(nameof(AsyncMeth), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
         Helpers.Assert(method is not null);
 

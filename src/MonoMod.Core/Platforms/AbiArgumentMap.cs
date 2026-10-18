@@ -1,5 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
+using System.Reflection;
 
 namespace MonoMod.Core.Platforms
 {
@@ -365,7 +366,7 @@ namespace MonoMod.Core.Platforms
                 result |= AbiArgumentMapResult.SourceHasUnmappedArguments;
             }
 
-            if (targetArgs.Length < targetFromSourceMappedUserArgs.Length + sourceArgs.Length)
+            if (targetAbi.UserArgumentCount < targetFromSourceMappedUserArgs.Length + sourceAbi.UserArgumentCount)
             {
                 // some source user arguments are guaranteed to not be mapped
                 result |= AbiArgumentMapResult.SourceHasUnmappedArguments | AbiArgumentMapResult.SourceHasUnmappedUserArguments;
@@ -375,6 +376,11 @@ namespace MonoMod.Core.Platforms
             if (isIdentity)
             {
                 result |= AbiArgumentMapResult.MappingIsIdentity;
+            }
+
+            if (!sourceAbi.AbiReturn.IsCompatible(targetAbi.AbiReturn))
+            {
+                result |= AbiArgumentMapResult.ArgumentTypesIncompatible;
             }
 
             // a mapping is considered valid if:
@@ -434,5 +440,24 @@ namespace MonoMod.Core.Platforms
         /// At least one mapped argument has incompatible types between the source and target.
         /// </summary>
         ArgumentTypesIncompatible = 1 << 6,
+    }
+
+    public static class AbiArgumentMapResultExtensions
+    {
+        public static void ThrowIfInvalid(this AbiArgumentMapResult result)
+        {
+            if (!result.Has(AbiArgumentMapResult.MappingIsValid))
+            {
+                if (result.Has(AbiArgumentMapResult.ArgumentTypesIncompatible))
+                {
+                    throw new InvalidOperationException("Arguments have incompatible argument types");
+                }
+                if (result.Has(AbiArgumentMapResult.TargetHasUnboundArguments))
+                {
+                    throw new InvalidOperationException("Target would have unset arguments");
+                }
+                throw new InvalidOperationException("Could not compute a valid mapping");
+            }
+        }
     }
 }

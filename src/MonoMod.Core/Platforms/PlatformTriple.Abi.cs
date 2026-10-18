@@ -1,4 +1,7 @@
-﻿using MonoMod.Utils;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Backports;
+using MonoMod.Logs;
+using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -141,6 +144,117 @@ namespace MonoMod.Core.Platforms
             }
 
             return new(args.ToArray(), returnType, Abi.ReturnsReturnBuffer);
+        }
+
+        /// <summary>
+        /// Gets the 'real detour target' when detouring <paramref name="src"/> to <paramref name="dst"/>.
+        /// </summary>
+        /// <remarks>
+        /// This will return an ABI fixup method instead of <paramref name="dst"/> when needed, automatically
+        /// generating them when needed. When this is needed depends on the argument order in the ABI.
+        /// </remarks>
+        /// <param name="src">The method being detoured from.</param>
+        /// <param name="dst">The method being detoured to.</param>
+        /// <returns>The method to detour to instead of <paramref name="dst"/>.</returns>
+        public MethodBase GetRealDetourTarget(MethodBase src, MethodBase dst)
+        {
+            Helpers.ThrowIfArgumentNull(src);
+            Helpers.ThrowIfArgumentNull(dst);
+
+            src = GetIdentifiable(src);
+            dst = GetIdentifiable(dst);
+
+            if (!dst.IsStatic)
+            {
+                throw new ArgumentException("Destination method must be static", nameof(dst));
+            }
+
+            if (dst is not MethodInfo dsti)
+            {
+                throw new ArgumentException("Destination method must be a MethodInfo", nameof(dst));
+            }
+
+            var argumentMap = src.IsStatic
+                ? AbiArgumentMap.Identity
+                : AbiArgumentMap.InstanceToStatic;
+
+            var srcAbi = GetMethodAbi(src);
+            var dstAbi = GetMethodAbi(dst);
+
+            var argOrder = new int[dstAbi.Arguments.Length];
+            var result = argumentMap.MapArguments(srcAbi, dstAbi, argOrder);
+            result.ThrowIfInvalid();
+            if (result.Has(AbiArgumentMapResult.SourceHasUnmappedUserArguments))
+            {
+                MMDbgLog.Warning($"Mapping from src={src} to dst={dst} has unused user arguments in src");
+            }
+            else if (result.Has(AbiArgumentMapResult.SourceHasUnmappedArguments))
+            {
+                MMDbgLog.Warning($"Mapping from src={src} to dst={dst} has unused ABI arguments in src");
+            }
+            if (result.Has(AbiArgumentMapResult.MappingIsIdentity))
+            {
+                // the mapping is the identity map, we can just use dst as the target
+                return dst;
+            }
+
+            var srcAbiArgs = srcAbi.Arguments.Span;
+            var dstAbiArgs = dstAbi.Arguments.Span;
+
+            var argumentTypes = new Type[srcAbi.Arguments.Length];
+            for (var i = 0; i < argumentTypes.Length; i++)
+            {
+                argumentTypes[i] = srcAbiArgs[i].Type;
+            }
+
+            // this is a non-identity mapping, we need to do real work
+            using var dmd = new DynamicMethodDefinition(
+                DebugFormatter.Format($"Glue:AbiFixup<{src},{dst}>"),
+                srcAbi.AbiReturn, argumentTypes
+            );
+            // TODO: make DMD apply attributes to the generated DynamicMethod, when possible
+            dmd.Definition!.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
+                (Mono.Cecil.MethodImplAttributes)(int)MethodImplOptionsEx.AggressiveOptimization;
+
+            var il = dmd.GetILProcessor();
+
+            // if we have a retbuf, grab it first so the IL is correct
+            if (dstAbi.ReturnBufferArgument >= 0)
+            {
+                il.Emit(OpCodes.Ldarg, argOrder[dstAbi.ReturnBufferArgument]);
+            }
+
+            // then load all of the user arguments in-order
+            for (var i = 0; i < argOrder.Length; i++)
+            {
+                var dstArg = dstAbiArgs[i];
+                if (dstArg.Kind is not SpecialArgumentKind.UserArguments)
+                    continue;
+
+                il.Emit(OpCodes.Ldarg, argOrder[i]);
+            }
+
+            // TODO: non-UserArguments
+
+            // then emit the call
+            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(dst));
+
+            // if we have a retbuf, store that
+            if (dstAbi.ReturnBufferArgument >= 0)
+            {
+                il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(dsti.ReturnType));
+            }
+
+            // if we're support to return the retbuf, do so
+            if (srcAbi.AbiReturnIsReturnBuffer)
+            {
+                il.Emit(OpCodes.Ldarg, argOrder[dstAbi.ReturnBufferArgument]);
+            }
+
+            // then we're done
+            il.Emit(OpCodes.Ret);
+
+            return dmd.Generate();
         }
     }
 }
