@@ -101,10 +101,11 @@ namespace MonoMod.Core.Platforms.Memory
 
             while (lowPage >= lowPageBound || highPage < highPageBound)
             {
-                // first check the high pages, while they're closer than low pages
+                // first check the high pages, while they're at least as close as low pages
+                // (the two conditions must be complementary, or an equidistant target would spin forever)
                 while (
                     highPage < highPageBound &&
-                    (lowPage < lowPageBound || target - lowPage > highPage - target)
+                    (lowPage < lowPageBound || target - lowPage >= highPage - target)
                 )
                 {
                     if (TryAllocNewPage(request, ref highPage, true, out allocated))
@@ -134,7 +135,15 @@ namespace MonoMod.Core.Platforms.Memory
                 if (!isFree) // this is not a free block, so we don't care
                     goto Fail;
 
-                if (!pageAlloc.TryAllocatePage(page, PageSize, request.Base.Executable, out var allocBase)) // allocation failed
+                // A free region usually starts where the previous allocation ended, which need not be aligned to our page size
+                // (on Windows, the allocation granularity), and the OS cannot allocate there. Use the first aligned address in the
+                // region instead; otherwise every free region reached that way, however large, would be skipped.
+                var pageMask = (nint)PageSize - 1;
+                var candidate = (page + pageMask) & ~pageMask;
+                if (candidate + PageSize > baseAddr + allocSize)
+                    goto Fail;
+
+                if (!pageAlloc.TryAllocatePage(candidate, PageSize, request.Base.Executable, out var allocBase)) // allocation failed
                     goto Fail;
 
                 var pageObj = new Page(this, allocBase, (uint)PageSize, request.Base.Executable);
