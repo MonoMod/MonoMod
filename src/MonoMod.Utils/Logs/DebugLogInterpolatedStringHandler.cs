@@ -317,6 +317,7 @@ namespace MonoMod.Logs
                 while (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(_pos), out wrote))
                     Grow();
                 _pos += wrote;
+                EndHole(value, true);
                 return;
             }
             else if (value is IFormattable)
@@ -434,6 +435,7 @@ namespace MonoMod.Logs
                 while (!DebugFormatter.TryFormatInto(value, dbgFormatExtraData, _chars.Slice(_pos), out wrote))
                     Grow();
                 _pos += wrote;
+                EndHole(value, true);
                 return;
             }
             else if (value is IFormattable)
