@@ -63,9 +63,10 @@ namespace MonoMod.UnitTest.Github
                 GCCallback.Register(() => done = true);
 
                 var retryCount = 0;
-                while (!done)
+                while (!Volatile.Read(ref done))
                 {
-                    GC.Collect(2, GCCollectionMode.Forced);
+                    GC.Collect(2, GCCollectionMode.Forced, true);
+                    GC.WaitForPendingFinalizers();
                     Thread.Sleep(1);
                     retryCount++;
                     if (retryCount > 100)
