@@ -145,7 +145,7 @@ namespace MonoMod.Utils
                 return asm.FullName;
 
             var hash = asm.Hash;
-            if (hash.Length != AssemblyHashPrefix.Length + 4)
+            if (hash?.Length != AssemblyHashPrefix.Length + 4)
                 return asm.FullName;
 
             for (var i = 0; i < AssemblyHashPrefix.Length; i++)
