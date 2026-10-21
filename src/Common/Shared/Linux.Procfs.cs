@@ -1,13 +1,13 @@
 // Based on https://github.com/dotnet/runtime/blob/48a162cff4bdfc77d7d7767497b073481febf1d8/src/libraries/Common/src/Interop/Linux/procfs/Interop.ProcFsStat.ParseMapModules.cs
 
-using MonoMod.Core.Utils;
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 
-namespace MonoMod.Core.Interop;
+namespace MonoMod.Interop;
 
 internal static class Linux
 {

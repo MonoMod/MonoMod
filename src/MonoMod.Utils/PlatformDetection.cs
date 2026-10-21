@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonoMod.Interop;
+using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -261,6 +262,18 @@ namespace MonoMod.Utils
                 }
                 // TODO: fill in other values for machine
 
+                if (os == OSKind.Linux)
+                {
+                    // under binary translation (e.g. Android's ndk_translation), uname() and the auxv describe the host,
+                    // not the code we're actually running, so check what the libc we loaded was built for
+                    var loadedArch = GetLoadedLibCArchitecture();
+                    if (loadedArch != ArchitectureKind.Unknown && loadedArch != arch)
+                    {
+                        MMDbgLog.Warning($"Kernel reports {arch}, but the loaded libc is {loadedArch}; assuming a translated process");
+                        arch = loadedArch;
+                    }
+                }
+
                 MMDbgLog.Trace($"uname() detected architecture info: {os} {arch}");
             }
             catch (Exception e)
@@ -268,6 +281,66 @@ namespace MonoMod.Utils
                 MMDbgLog.Error($"Error trying to detect info on POSIX-like system {e}");
                 return;
             }
+        }
+
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "This is a best-effort cross-check; failing it must leave the uname() result in place.")]
+        private static ArchitectureKind GetLoadedLibCArchitecture()
+        {
+            try
+            {
+                DynDll.InitializeBackend(OSKind.Linux);
+                if (!DynDll.TryOpenLibrary(Interop.Unix.LibC, out var libc) || !DynDll.TryGetExport(libc, "uname", out var export))
+                {
+                    return ArchitectureKind.Unknown;
+                }
+
+                var modules = Linux.Procfs.ParseMapsModules(Linux.Procfs.ProcPid.Self);
+                if (modules is null)
+                {
+                    return ArchitectureKind.Unknown;
+                }
+
+                // find the module containing that export, then read the machine type out of its ELF header
+                var address = (ulong)(long)export;
+                foreach (var module in modules)
+                {
+                    if (address < module.StartAddress || address - module.StartAddress >= module.Size)
+                    {
+                        continue;
+                    }
+
+                    var header = new byte[20];
+                    using (var file = File.OpenRead(module.Path))
+                    {
+                        if (file.Read(header, 0, header.Length) != header.Length)
+                        {
+                            return ArchitectureKind.Unknown;
+                        }
+                    }
+
+                    // \x7FELF, little-endian; e_machine is at offset 18
+                    if (header[0] != 0x7F || header[1] != 'E' || header[2] != 'L' || header[3] != 'F' || header[5] != 1)
+                    {
+                        return ArchitectureKind.Unknown;
+                    }
+
+                    return (header[18] | (header[19] << 8)) switch
+                    {
+                        3 => ArchitectureKind.x86, // EM_386
+                        40 => ArchitectureKind.Arm, // EM_ARM
+                        62 => ArchitectureKind.x86_64, // EM_X86_64
+                        183 => ArchitectureKind.Arm64, // EM_AARCH64
+                        _ => ArchitectureKind.Unknown,
+                    };
+                }
+            }
+            catch (Exception e)
+            {
+                MMDbgLog.Warning($"Could not determine the architecture of the loaded libc: {e}");
+            }
+
+            return ArchitectureKind.Unknown;
         }
 
         private static unsafe string GetMachineNamePosix(OSKind os, Span<byte> unameBuffer)

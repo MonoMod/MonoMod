@@ -10,7 +10,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace MonoMod.Core.Utils
+namespace MonoMod
 {
     /// <summary>
     /// Provides a string parser that may be used instead of String.Split

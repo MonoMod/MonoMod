@@ -88,7 +88,7 @@ namespace MonoMod.Core.Platforms
             {
                 OSKind.Posix => throw new NotImplementedException(),
                 OSKind.Linux => new Systems.LinuxSystem(),
-                OSKind.Android => throw new NotImplementedException(),
+                OSKind.Android => new Systems.AndroidSystem(),
                 OSKind.OSX => new Systems.MacOSSystem(),
                 OSKind.IOS => throw new NotImplementedException(),
                 OSKind.BSD => throw new NotImplementedException(),
