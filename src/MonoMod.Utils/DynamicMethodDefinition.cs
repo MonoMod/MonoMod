@@ -303,22 +303,15 @@ namespace MonoMod.Utils
                 didTry = true;
 
                 var instance = DMDGenerator<TGenerator>.Instance;
-                try
-                {
-                    if (dmd.IsAsync && !instance.SupportsAsyncMethods)
-                    {
-                        // generator cannot generate this method
-                        return false;
-                    }
 
-                    result = ((IDMDGenerator)instance).Generate(dmd, context);
-                    return true;
-                }
-                catch (Exception e)
+                if (dmd.IsAsync && !instance.SupportsAsyncMethods)
                 {
-                    MMDbgLog.Error($"Exception while trying to use generator {typeof(TGenerator)}: {e}");
+                    // generator cannot generate this method
                     return false;
                 }
+
+                result = ((IDMDGenerator)instance).Generate(dmd, context);
+                return true;
             }
 
             MethodInfo? result;
