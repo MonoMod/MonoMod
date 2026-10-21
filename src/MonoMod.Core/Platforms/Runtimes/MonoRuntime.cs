@@ -377,5 +377,13 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             throw new NotSupportedException();
         }
+
+        public (MethodInfo Method, RuntimeMethodHandle Variant) GetAsyncVariantRealDetourTarget(
+                GetAsyncVariantRealDetourTargetArgs args,
+                AbiArgumentMap argumentMap,
+                out IDisposable? handle)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

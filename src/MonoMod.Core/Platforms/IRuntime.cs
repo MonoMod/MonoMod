@@ -134,6 +134,24 @@ namespace MonoMod.Core.Platforms
         /// <returns><see langword="true"/> if <paramref name="method"/> is treated specially by the runtime's async machinery,
         /// and <paramref name="runtimeAsyncInfo"/> is populated. <see langword="false"/> otherwise.</returns>
         bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo);
+
+        /// <summary>
+        /// Gets the real method to detour a runtime async's async variant to.
+        /// </summary>
+        /// <remarks>
+        /// <para>This must only be called if <see cref="Features"/> includes <see cref="RuntimeFeature.HasRuntimeAsync"/>.</para>
+        /// <para><paramref name="from"/> must be a method for which <see cref="TryGetRuntimeAsyncInfo(MethodBase, out RuntimeAsyncMethodInfo)"/> returns
+        /// <see langword="true"/>. <paramref name="fromAsyncVariant"/> must be the <see cref="RuntimeMethodHandle"/> referring to <paramref name="from"/>'s
+        /// async variant. The specified <paramref name="to"/> variant must be ABI-compatible with <paramref name="from"/>.</para>
+        /// </remarks>
+        /// <param name="argumentMap">The <see cref="AbiArgumentMap"/> specifying how to pass the parameters of <paramref name="from"/> to <paramref name="to"/>.</param>
+        /// <param name="handle">On return, holds a handle to resources required to keep the detour method functional.</param>
+        /// <returns>A tuple of the <see cref="MethodInfo"/> of the new target method, and the <see cref="RuntimeMethodHandle"/> of
+        /// the method variant of the method.</returns>
+        (MethodInfo Method, RuntimeMethodHandle Variant) GetAsyncVariantRealDetourTarget(
+            GetAsyncVariantRealDetourTargetArgs args,
+            AbiArgumentMap argumentMap,
+            out IDisposable? handle);
     }
 
     /// <summary>
@@ -149,4 +167,18 @@ namespace MonoMod.Core.Platforms
     /// <param name="codeRw">A pointer to the start of the read/write capable code. This contains the actual code data.</param>
     /// <param name="codeSize">The size of the code.</param>
     public delegate void OnMethodCompiledCallback(RuntimeMethodHandle methodHandle, MethodBase? method, IntPtr codeStart, IntPtr codeRw, ulong codeSize);
+
+    /// <summary>
+    /// Arguments for <see cref="IRuntime.GetAsyncVariantRealDetourTarget(GetAsyncVariantRealDetourTargetArgs, AbiArgumentMap, out IDisposable?)"/>.
+    /// </summary>
+    /// <param name="From">The async method to detour from.</param>
+    /// <param name="FromAsyncVariant">The async variant of <paramref name="from"/> being detoured.</param>
+    /// <param name="To">The method being detoured to.</param>
+    /// <param name="ToVariant">The variant of <paramref name="to"/> being detoured to.</param>
+    /// <param name="FromOrigEntrypointSlot">A pointer to a slot which, once the detour is configured, will hold a pointer to an entrypoint which
+    /// invokes <paramref name="FromAsyncVariant"/> (and not a clone).</param>
+    public readonly record struct GetAsyncVariantRealDetourTargetArgs(
+        MethodBase From, RuntimeMethodHandle FromAsyncVariant,
+        MethodInfo To, RuntimeMethodHandle ToVariant,
+        IntPtr FromOrigEntrypointSlot);
 }

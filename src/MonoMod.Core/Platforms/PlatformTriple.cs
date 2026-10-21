@@ -1,10 +1,7 @@
-using Mono.Cecil.Cil;
-using MonoMod.Backports;
 using MonoMod.Core.Utils;
 using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;

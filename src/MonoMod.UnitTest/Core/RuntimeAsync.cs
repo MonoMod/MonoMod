@@ -37,7 +37,14 @@ public class RuntimeAsync(ITestOutputHelper output) : TestBase(output)
         var method = typeof(RuntimeAsync).GetMethod(nameof(AsyncMeth), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
         Helpers.Assert(method is not null);
 
-        var result = PlatformTriple.Current.Runtime.TryGetRuntimeAsyncInfo(method, out var info);
+        Assert.True(PlatformTriple.Current.Runtime.TryGetRuntimeAsyncInfo(method, out var info));
+
+        var target = PlatformTriple.Current.Runtime.GetAsyncVariantRealDetourTarget(
+            new(method, info.AsyncVariant,
+                method, info.AsyncVariant,
+                (nint)0),
+            AbiArgumentMap.Identity,
+            out var hnd);
 
     }
 

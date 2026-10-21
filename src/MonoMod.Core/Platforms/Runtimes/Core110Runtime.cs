@@ -1,15 +1,25 @@
+using MonoMod.Core.Utils;
+using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes
 {
     [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 12.")]
-    internal class Core110Runtime : Core100Runtime
+    internal class Core110Runtime : Core100Runtime, IInitialize<PlatformTriple>
     {
+        private PlatformTriple platformTriple = null!;
+        protected PlatformTriple PlatformTriple => platformTriple;
+
+        void IInitialize<PlatformTriple>.Initialize(PlatformTriple value) => platformTriple = value;
+
         public Core110Runtime(ISystem system, IArchitecture arch) : base(system, arch)
         {
             if (AbiCore is { } abi)
@@ -143,6 +153,127 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
 
             return result;
+        }
+
+        public override (MethodInfo Method, RuntimeMethodHandle Variant) GetAsyncVariantRealDetourTarget(
+            GetAsyncVariantRealDetourTargetArgs args,
+            AbiArgumentMap argumentMap,
+            out IDisposable? handle)
+        {
+            handle = null;
+
+            var fromAbiFlags = GetMethodAbiFlags(args.From, args.FromAsyncVariant);
+            Helpers.Assert(fromAbiFlags.Has(MethodAbiFlags.HasAsyncContinuation));
+            var fromAbi = MethodAbi.GetMethodAbi(Abi, args.From, fromAbiFlags);
+            var toAbi = MethodAbi.GetMethodAbi(Abi, args.To, GetMethodAbiFlags(args.To, args.ToVariant));
+
+            // compute the main mapping and compatibility
+            var toMap = new int[toAbi.Arguments.Length];
+            var mapResult = argumentMap.MapArguments(fromAbi, toAbi, toMap);
+            mapResult.ThrowIfInvalid();
+            // TODO: warn for uunmapped source args..?
+
+            Helpers.Assert(fromAbi.AsyncContinuationArgument >= 0);
+
+            // we know that we have something compatible now, now to do more work...
+            var toTarget = GetMethodStableEntrypoint(args.To, args.ToVariant);
+
+            // We have now collected sufficient information to emit a helper.
+            var fromAbiArgs = fromAbi.Arguments.Span;
+            var toAbiArgs = toAbi.Arguments.Span;
+
+            var fromArgTypes = fromAbiArgs.ToArray().Select(a => a.Type).ToArray();
+            var toArgTypes = toAbiArgs.ToArray().Select(a => a.Type).ToArray();
+
+            using var dmd = new DynamicMethodDefinition(
+                DebugFormatter.Format($"MM:AsyncProxy[{args.From} -> {args.To}]"),
+                fromAbi.AbiReturn,
+                fromArgTypes);
+            // This DMD must NOT be async since we want to access the continuation (and that is the primary reason for this method).
+
+            var il = dmd.GetILGenerator();
+
+            // We need to check the continuation argument, since if that's non-null, this is a resume OF THE ORIGINAL
+            // ASYNC METHOD, which we MUST pass back to the original since we can't make sense of it ourselves.
+            var noContinuationLbl = il.DefineLabel();
+            il.Emit(OpCodes.Ldarg, fromAbi.AsyncContinuationArgument);
+            il.Emit(OpCodes.Brfalse, noContinuationLbl);
+
+            // We have a continuation, and need to just emit a direct calli to the original.
+            for (var i = 0; i < fromAbiArgs.Length; i++)
+            {
+                il.Emit(OpCodes.Ldarg, i);
+            }
+
+            // args are on stack, now we need to load our target
+            if (IntPtr.Size == 4)
+            {
+                il.Emit(OpCodes.Ldc_I4, (int)(uint)args.FromOrigEntrypointSlot);
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldc_I8, (long)(ulong)args.FromOrigEntrypointSlot);
+            }
+            // the pointer we're given is an indirection slot
+            il.Emit(OpCodes.Ldind_I);
+
+            il.Emit(OpCodes.Tailcall); // we're emitting the tailcall sequence
+            il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, fromAbi.AbiReturn, fromArgTypes, null);
+            il.Emit(OpCodes.Ret);
+
+            il.MarkLabel(noContinuationLbl);
+
+            // We have NO continuation, we need to invoke the target method.
+            // Since we need to invoke a specific variant, we *also* do that through a pointer, though this one
+            // we directly embed the stable entrypoint of.
+            for (var i = 0; i < toAbiArgs.Length; i++)
+            {
+                var fromArg = toMap[i];
+                il.Emit(OpCodes.Ldarg, fromArg);
+            }
+
+            if (IntPtr.Size == 4)
+            {
+                il.Emit(OpCodes.Ldc_I4, (int)(uint)toTarget);
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldc_I8, (long)(ulong)toTarget);
+            }
+
+            il.Emit(OpCodes.Tailcall);
+            il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, toAbi.AbiReturn, toArgTypes, null);
+            il.Emit(OpCodes.Ret);
+
+            // our ABI fixup is done. 
+            var resultMethod = dmd.Generate();
+            // Since we're generating an ordinary method with the ABI layout, we want to use the ordinary
+            // method handle.
+            return (resultMethod, GetMethodHandle(resultMethod));
+        }
+
+        protected virtual unsafe nuint GetMethodStableEntrypoint(MethodBase method, RuntimeMethodHandle handle)
+        {
+            // We MUST have To compiled, since we need to access its stable entrypoint
+            // so we can call it properly (since we cannot, in general, just use ldftn,
+            // especially not to call arbitrary variants).
+            Compile(method, handle);
+            var toMd = (V110.MethodDesc*)handle.Value;
+            return toMd->GetStableEntryPoint();
+        }
+
+        private sealed class AsyncVariantDetourHolder : IDisposable
+        {
+            public readonly List<IDisposable> Disposables = new();
+            public readonly List<object> References = new();
+
+            public void Dispose()
+            {
+                foreach (var disp in Disposables)
+                {
+                    disp.Dispose();
+                }
+            }
         }
 
         // src/coreclr/inc/jiteeversionguid.h
