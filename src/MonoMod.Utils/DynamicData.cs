@@ -17,8 +17,8 @@ namespace MonoMod.Utils
 
         public static event Action<DynamicData, Type, object?>? OnInitialize;
 
-        private static readonly Dictionary<Type, _Cache_> _CacheMap = new();
-        private static readonly Dictionary<Type, _Data_> _DataStaticMap = new();
+        private static readonly ConditionalWeakTable<Type, _Cache_> _CacheMap = new();
+        private static readonly ConditionalWeakTable<Type, _Data_> _DataStaticMap = new();
         private static readonly ConditionalWeakTable<object, _Data_> _DataMap = new();
         private static readonly ConditionalWeakTable<object, DynamicData> _DynamicDataMap = new();
 
@@ -33,6 +33,10 @@ namespace MonoMod.Utils
             public readonly Dictionary<string, Action<object?, object?>> Setters = new();
             public readonly Dictionary<string, Func<object?, object?[]?, object?>> Methods = new();
 
+            private _Cache_() { }
+
+            public static readonly _Cache_ EmptyInstance = new();
+
             [SuppressMessage("Design", "CA1031:Do not catch general exception types",
                 Justification = "If a failure occurs within the try block, we fall back to using raw reflection instead of fast invokers.")]
             public _Cache_(Type? targetType)
@@ -45,17 +49,26 @@ namespace MonoMod.Utils
                         var name = field.Name;
                         if (!Getters.ContainsKey(name) && !Setters.ContainsKey(name))
                         {
-                            try
+                            if (field.IsLiteral)
                             {
-                                var fastInvoker = field.GetFastInvoker();
-                                Getters[name] = (obj) => fastInvoker(obj);
-                                Setters[name] = (obj, value) => fastInvoker(obj, value);
-                            }
-                            catch
-                            {
-                                // eat the exception and fall back to pure reflection
+                                // literal fields can't be set
                                 Getters[name] = field.GetValue;
-                                Setters[name] = field.SetValue;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    var fastInvoker = field.GetFastInvoker();
+                                    Getters[name] = (obj) => fastInvoker(obj);
+                                    Setters[name] = (obj, value) => fastInvoker(obj, value);
+                                }
+                                catch (Exception e)
+                                {
+                                    // eat the exception and fall back to pure reflection
+                                    MMDbgLog.Warning($"Exception while creating fast invoker for field {field}: {e}");
+                                    Getters[name] = field.GetValue;
+                                    Setters[name] = field.SetValue;
+                                }
                             }
                         }
                     }
@@ -72,9 +85,10 @@ namespace MonoMod.Utils
                                 var fastInvoker = get.GetFastInvoker();
                                 Getters[name] = (obj) => fastInvoker(obj);
                             }
-                            catch
+                            catch (Exception e)
                             {
                                 // eat the exception and fall back to pure reflection
+                                MMDbgLog.Warning($"Exception while creating fast invoker for getter of property {prop}: {e}");
                                 Getters[name] = (obj) => get.Invoke(obj, _NoArgs);
                             }
                         }
@@ -87,9 +101,10 @@ namespace MonoMod.Utils
                                 var fastInvoker = set.GetFastInvoker();
                                 Setters[name] = (obj, value) => fastInvoker(obj, value);
                             }
-                            catch
+                            catch (Exception e)
                             {
                                 // eat the exception and fall back to pure reflection
+                                MMDbgLog.Warning($"Exception while creating fast invoker setter of property {prop}: {e}");
                                 Setters[name] = (obj, value) => set.Invoke(obj, new[] { value });
                             }
                         }
@@ -125,9 +140,10 @@ namespace MonoMod.Utils
                             var cb = kvp.Value.GetFastInvoker();
                             Methods[kvp.Key] = (target, args) => cb(target, args);
                         }
-                        catch
+                        catch (Exception e)
                         {
                             // eat the exception and fall back to pure reflection
+                            MMDbgLog.Warning($"Exception while creating fast invoker setter of method {kvp.Value}: {e}");
                             Methods[kvp.Key] = kvp.Value.Invoke;
                         }
                     }
@@ -184,7 +200,10 @@ namespace MonoMod.Utils
             {
                 if (!_CacheMap.TryGetValue(type, out var cache))
                 {
+                    // protect against reentrancy in some truly degenerate circumstances
+                    _CacheMap.Add(type, _Cache_.EmptyInstance);
                     cache = new _Cache_(type);
+                    _CacheMap.Remove(type);
                     _CacheMap.Add(type, cache);
                 }
                 _Cache = cache;
@@ -274,7 +293,7 @@ namespace MonoMod.Utils
 
         public static object? Set(object target, object? other = null)
         {
-            using var data = new DynamicData(target);
+            var data = For(target);
             data.CopyFrom(other);
             return data.Target;
         }
