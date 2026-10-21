@@ -12,6 +12,7 @@ namespace MonoMod.Utils
     /// </summary>
     public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator>
     {
+        protected override bool SupportsAsyncMethods => true;
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
         {
@@ -92,6 +93,22 @@ namespace MonoMod.Utils
                     DeclaringType = typeDef,
                     NoInlining = true
                 };
+
+                if (dmd.Definition.ImplAttributes.Has(Mono.Cecil.MethodImplAttributes.NoInlining))
+                {
+                    clone.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining;
+                }
+
+                // AggressiveOptimization
+                if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)512))
+                {
+                    clone.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)512;
+                }
+
+                if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl))
+                {
+                    clone.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
 
                 foreach (var param in def.Parameters)
                     clone.Parameters.Add(param.Clone().Relink(relinker, clone));
@@ -190,6 +207,7 @@ namespace MonoMod.Utils
                         module.Write(fileStream);
                 }
 
+                // TODO: load these in unloadable ALCs when possible?
                 var asm = ReflectionHelper.Load(module);
 
                 return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)!

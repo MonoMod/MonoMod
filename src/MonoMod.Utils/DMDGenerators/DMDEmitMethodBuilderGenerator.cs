@@ -1,4 +1,5 @@
 ﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
+using MonoMod.Backports;
 using MonoMod.Logs;
 using System;
 using System.Collections.Generic;
@@ -11,15 +12,18 @@ namespace MonoMod.Utils
 {
     public sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator>
     {
-
         private static readonly bool _MBCanRunAndCollect = Enum.IsDefined(typeof(AssemblyBuilderAccess), "RunAndCollect");
+
+        protected override bool SupportsAsyncMethods => true;
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
         {
             var typeBuilder = context as TypeBuilder;
+
             var method = GenerateMethodBuilder(dmd, typeBuilder);
             typeBuilder = (TypeBuilder)method.DeclaringType!;
             var type = typeBuilder.CreateType();
+
             var dumpPath = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
             if (!string.IsNullOrEmpty(dumpPath))
             {
@@ -119,7 +123,7 @@ namespace MonoMod.Utils
 #endif
                 typeBuilder = module.DefineType(
                     DebugFormatter.Format($"DMD<{orig}>?{dmd.GetHashCode()}"),
-                    System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
+                    TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class
                 );
             }
 
@@ -207,20 +211,36 @@ namespace MonoMod.Utils
                 SanitizeForMono(ref argTypesModOpt);
             }
 #endif
-
+            
             var mb = typeBuilder.DefineMethod(
                 dmd.Name ?? (orig?.Name ?? def.Name).Replace('.', '_'),
-                System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                MethodAttributes.HideBySig | MethodAttributes.Public | MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,
                 argTypes, argTypesModReq, argTypesModOpt
             );
             var il = mb.GetILGenerator();
 
+            var implAttrs = (int)(MethodImplAttributes.IL | MethodImplAttributes.Managed);
+            if (dmd.Definition.ImplAttributes.Has(Mono.Cecil.MethodImplAttributes.NoInlining))
+            {
+                implAttrs |= (int)MethodImplAttributes.NoInlining;
+            }
+            if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)MethodImplOptionsEx.AggressiveOptimization))
+            {
+                implAttrs |= (int)MethodImplOptionsEx.AggressiveOptimization;
+            }
+            if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl))
+            {
+                implAttrs |= (int)RuntimeAsync.AsyncIl;
+            }
+            mb.SetImplementationFlags((MethodImplAttributes)implAttrs);
+
             _DMDEmit.Generate(dmd, mb, il);
 
             return mb;
         }
+
 #if NETFRAMEWORK
         private static void SanitizeForMono(ref Type[] toSanitize)
         {

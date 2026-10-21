@@ -148,7 +148,7 @@ namespace MonoMod.Utils
                         switch (handler.HandlerType)
                         {
                             case ExceptionHandlerType.Filter:
-                                il.BeginCatchBlock(null!); // This parameter should be null for filter blocks, even though the compiler doesn't thihnk so.
+                                il.BeginCatchBlock(null!); // This parameter should be null for filter blocks, even though the compiler doesn't think so.
                                 break;
                             case ExceptionHandlerType.Catch:
                                 il.BeginCatchBlock(handler.CatchType.ResolveReflection());
@@ -225,9 +225,9 @@ namespace MonoMod.Utils
                             if (asm != null && accessChecksIgnored is not null && assemblyBuilder is not null && !accessChecksIgnored.Contains(asm)) {
                                 // while (member.DeclaringType != null)
                                 //     member = member.DeclaringType;
-                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, new object[] {
+                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [
                                     asm.GetName().Name!
-                                }));
+                                ]));
                                 accessChecksIgnored.Add(asm);
                             }
                         }
@@ -243,9 +243,11 @@ namespace MonoMod.Utils
                             continue;
                         }
 #if METHODBUILDER_SUPPORTED
-                        if (mb is not null) {
+                        if (mb is not null)
+                        {
                             operand = csite.ResolveReflection(mb.Module);
-                        } else
+                        }
+                        else
 #endif
                         {
                             throw new NotSupportedException();
@@ -253,14 +255,19 @@ namespace MonoMod.Utils
                     }
 
 #if METHODBUILDER_SUPPORTED
-                    if (mb != null && operand is MethodBase called && called.DeclaringType == null) {
+                    if (mb != null && operand is MethodBase called && called.DeclaringType == null)
+                    {
                         // "Global" methods (f.e. DynamicMethods) cannot be tokenized.
-                        if (opcode == Mono.Cecil.Cil.OpCodes.Call) {
-                            if (called is MethodInfo target && target.IsDynamicMethod()) {
+                        if (opcode == Mono.Cecil.Cil.OpCodes.Call)
+                        {
+                            if (called is MethodInfo target && target.IsDynamicMethod())
+                            {
                                 // This should be heavily optimizable.
                                 operand = _CreateMethodProxy(mb, target);
                                 // TODO: replace this with allocation of a reference and FastDelegateInvokers call, or similar invocation sequence
-                            } else {
+                            }
+                            else
+                            {
                                 var ptr = called.GetLdftnPointer();
                                 if (IntPtr.Size == 4)
                                     il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, (int) ptr);
@@ -270,7 +277,9 @@ namespace MonoMod.Utils
                                 opcode = Mono.Cecil.Cil.OpCodes.Calli;
                                 operand = ((MethodReference) instr.Operand).ResolveReflectionSignature(mb.Module);
                             }
-                        } else {
+                        }
+                        else
+                        {
                             throw new NotSupportedException($"Unsupported global method operand on opcode {opcode.Name}");
                         }
                     }
