@@ -3,7 +3,6 @@ using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -260,20 +259,6 @@ namespace MonoMod.Core.Platforms.Runtimes
             Compile(method, handle);
             var toMd = (V110.MethodDesc*)handle.Value;
             return toMd->GetStableEntryPoint();
-        }
-
-        private sealed class AsyncVariantDetourHolder : IDisposable
-        {
-            public readonly List<IDisposable> Disposables = new();
-            public readonly List<object> References = new();
-
-            public void Dispose()
-            {
-                foreach (var disp in Disposables)
-                {
-                    disp.Dispose();
-                }
-            }
         }
 
         // src/coreclr/inc/jiteeversionguid.h

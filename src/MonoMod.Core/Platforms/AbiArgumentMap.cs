@@ -441,8 +441,21 @@ namespace MonoMod.Core.Platforms
         ArgumentTypesIncompatible = 1 << 6,
     }
 
+    /// <summary>
+    /// Extensions for <see cref="AbiArgumentMapResult"/>.
+    /// </summary>
     public static class AbiArgumentMapResultExtensions
     {
+        /// <summary>
+        /// Throws if <paramref name="result"/> does not have <see cref="AbiArgumentMapResult.MappingIsValid"/> set.
+        /// </summary>
+        /// <remarks>
+        /// <para>The message of the thrown exception encodes information stored in the other bits of <paramref name="result"/>
+        /// automatically.</para>
+        /// </remarks>
+        /// <param name="result">The <see cref="AbiArgumentMapResult"/> to check.</param>
+        /// <exception cref="InvalidOperationException">Thrown if <paramref name="result"/> does not have
+        /// <see cref="AbiArgumentMapResult.MappingIsValid"/> set with an informative message.</exception>
         public static void ThrowIfInvalid(this AbiArgumentMapResult result)
         {
             if (!result.Has(AbiArgumentMapResult.MappingIsValid))

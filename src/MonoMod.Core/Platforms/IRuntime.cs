@@ -140,11 +140,17 @@ namespace MonoMod.Core.Platforms
         /// </summary>
         /// <remarks>
         /// <para>This must only be called if <see cref="Features"/> includes <see cref="RuntimeFeature.HasRuntimeAsync"/>.</para>
-        /// <para><paramref name="from"/> must be a method for which <see cref="TryGetRuntimeAsyncInfo(MethodBase, out RuntimeAsyncMethodInfo)"/> returns
-        /// <see langword="true"/>. <paramref name="fromAsyncVariant"/> must be the <see cref="RuntimeMethodHandle"/> referring to <paramref name="from"/>'s
-        /// async variant. The specified <paramref name="to"/> variant must be ABI-compatible with <paramref name="from"/>.</para>
+        /// <para><see cref="GetAsyncVariantRealDetourTargetArgs.From"/> must be a method for which
+        /// <see cref="TryGetRuntimeAsyncInfo(MethodBase, out RuntimeAsyncMethodInfo)"/> returns <see langword="true"/>.
+        /// <see cref="GetAsyncVariantRealDetourTargetArgs.FromAsyncVariant"/> must be the <see cref="RuntimeMethodHandle"/> referring
+        /// to <see cref="GetAsyncVariantRealDetourTargetArgs.From"/>'s async variant. The specified <see cref="GetAsyncVariantRealDetourTargetArgs.To"/>
+        /// variant must be ABI-compatible with <see cref="GetAsyncVariantRealDetourTargetArgs.From"/> according to <paramref name="argumentMap"/>.</para>
+        /// <para>All methods passed to this method, the returned <paramref name="handle"/>, and the indirection slot in
+        /// <see cref="GetAsyncVariantRealDetourTargetArgs.FromOrigEntrypointSlot"/> must be kept alive as long as the returned method is in use.</para>
         /// </remarks>
-        /// <param name="argumentMap">The <see cref="AbiArgumentMap"/> specifying how to pass the parameters of <paramref name="from"/> to <paramref name="to"/>.</param>
+        /// <param name="args">A <see cref="GetAsyncVariantRealDetourTargetArgs"/> structure containing detailed arguments to this call.</param>
+        /// <param name="argumentMap">The <see cref="AbiArgumentMap"/> specifying how to pass the parameters of
+        /// <see cref="GetAsyncVariantRealDetourTargetArgs.From"/> to <see cref="GetAsyncVariantRealDetourTargetArgs.To"/>.</param>
         /// <param name="handle">On return, holds a handle to resources required to keep the detour method functional.</param>
         /// <returns>A tuple of the <see cref="MethodInfo"/> of the new target method, and the <see cref="RuntimeMethodHandle"/> of
         /// the method variant of the method.</returns>
@@ -172,9 +178,9 @@ namespace MonoMod.Core.Platforms
     /// Arguments for <see cref="IRuntime.GetAsyncVariantRealDetourTarget(GetAsyncVariantRealDetourTargetArgs, AbiArgumentMap, out IDisposable?)"/>.
     /// </summary>
     /// <param name="From">The async method to detour from.</param>
-    /// <param name="FromAsyncVariant">The async variant of <paramref name="from"/> being detoured.</param>
+    /// <param name="FromAsyncVariant">The async variant of <paramref name="From"/> being detoured.</param>
     /// <param name="To">The method being detoured to.</param>
-    /// <param name="ToVariant">The variant of <paramref name="to"/> being detoured to.</param>
+    /// <param name="ToVariant">The variant of <paramref name="To"/> being detoured to.</param>
     /// <param name="FromOrigEntrypointSlot">A pointer to a slot which, once the detour is configured, will hold a pointer to an entrypoint which
     /// invokes <paramref name="FromAsyncVariant"/> (and not a clone).</param>
     public readonly record struct GetAsyncVariantRealDetourTargetArgs(

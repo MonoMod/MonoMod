@@ -36,6 +36,7 @@
     <NoWarn>$(NoWarn);CA1003</NoWarn> <!-- Change event to use EventHandler<EventArgs> -->
     <NoWarn>$(NoWarn);CA2020</NoWarn> <!-- Starting with .NET 7, conversions with IntPtr don't throw in an unchecked context -->
     <NoWarn>$(NoWarn);CA1303</NoWarn> <!-- Use resource tables for strings passed to Console.WriteLine -->
+    <NoWarn>$(NoWarn);CA1711</NoWarn> <!-- Identifiers should not have incorrect suffix -->
 
     <NewCecilVersion>0.11.6</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
