@@ -59,7 +59,22 @@ namespace MonoMod.Utils
         public MethodBase? OriginalMethod { get; }
         public MethodDefinition Definition { get; }
         public ModuleDefinition Module { get; }
-        public bool IsAsync => (((MethodImplOptions)Definition.ImplAttributes) & RuntimeAsync.AsyncIl) != 0;
+        public bool IsAsync
+        {
+            get => (((MethodImplOptions)Definition.ImplAttributes) & RuntimeAsync.AsyncIl) != 0;
+            set
+            {
+                if (value)
+                {
+                    Helpers.Assert(RuntimeAsync.IsSupported);
+                    Definition.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
+                else
+                {
+                    Definition.ImplAttributes &= ~(Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
+            }
+        }
 
         public string? Name { get; }
 
