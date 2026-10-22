@@ -62,28 +62,17 @@ namespace MonoMod.Core.Platforms
         /// </remarks>
         /// <param name="src">The method being detoured from.</param>
         /// <param name="dst">The method being detoured to.</param>
+        /// <param name="argumentMap">The <see cref="AbiArgumentMap"/> specifying how to map arguments from <paramref name="src"/>
+        /// onto the arguments of <paramref name="dst"/>.</param>
         /// <returns>The method to detour to instead of <paramref name="dst"/>.</returns>
-        public MethodBase GetRealDetourTarget(MethodBase src, MethodBase dst)
+        public MethodBase GetRealDetourTarget(MethodBase src, MethodBase dst, AbiArgumentMap argumentMap)
         {
             Helpers.ThrowIfArgumentNull(src);
             Helpers.ThrowIfArgumentNull(dst);
+            Helpers.ThrowIfArgumentNull(argumentMap);
 
             src = GetIdentifiable(src);
             dst = GetIdentifiable(dst);
-
-            if (!dst.IsStatic)
-            {
-                throw new ArgumentException("Destination method must be static", nameof(dst));
-            }
-
-            if (dst is not MethodInfo dsti)
-            {
-                throw new ArgumentException("Destination method must be a MethodInfo", nameof(dst));
-            }
-
-            var argumentMap = src.IsStatic
-                ? AbiArgumentMap.Identity
-                : AbiArgumentMap.InstanceToStatic;
 
             var srcAbi = GetMethodAbi(src);
             var dstAbi = GetMethodAbi(dst);
@@ -144,12 +133,13 @@ namespace MonoMod.Core.Platforms
             // TODO: non-UserArguments
 
             // then emit the call
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(dst));
+            var mr = il.Body.Method.Module.ImportReference(dst);
+            il.Emit(OpCodes.Call, mr);
 
             // if we have a retbuf, store that
             if (dstAbi.ReturnBufferArgument >= 0)
             {
-                il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(dsti.ReturnType));
+                il.Emit(OpCodes.Stobj, mr.ReturnType);
             }
 
             // if we're support to return the retbuf, do so

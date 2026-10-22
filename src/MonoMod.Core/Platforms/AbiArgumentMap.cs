@@ -251,19 +251,19 @@ namespace MonoMod.Core.Platforms
             var srcArgKindsMask = 0;
             if (sourceAbi.ThisArgument >= 0)
             {
-                srcArgKindsMask = 1 << (int)SpecialArgumentKind.ThisPointer;
+                srcArgKindsMask |= 1 << (int)SpecialArgumentKind.ThisPointer;
             }
             if (sourceAbi.ReturnBufferArgument >= 0)
             {
-                srcArgKindsMask = 1 << (int)SpecialArgumentKind.ReturnBuffer;
+                srcArgKindsMask |= 1 << (int)SpecialArgumentKind.ReturnBuffer;
             }
             if (sourceAbi.GenericContextArgument >= 0)
             {
-                srcArgKindsMask = 1 << (int)SpecialArgumentKind.GenericContext;
+                srcArgKindsMask |= 1 << (int)SpecialArgumentKind.GenericContext;
             }
             if (sourceAbi.AsyncContinuationArgument >= 0)
             {
-                srcArgKindsMask = 1 << (int)SpecialArgumentKind.AsyncContinuation;
+                srcArgKindsMask |= 1 << (int)SpecialArgumentKind.AsyncContinuation;
             }
 
             var srcArgKindsMapped = 0;
@@ -315,7 +315,7 @@ namespace MonoMod.Core.Platforms
                 }
                 else
                 {
-                    srcArgKindsMapped = 1 << (int)srcArgKind;
+                    srcArgKindsMapped |= 1 << (int)srcArgKind;
                     srcArgIdx = srcArgKind switch
                     {
                         SpecialArgumentKind.ThisPointer => sourceAbi.ThisArgument,

@@ -42,7 +42,7 @@ namespace MonoMod.Core.Platforms
         // TODO: when this is a NativeDetour, we need to fix up the alt entry point too, if the new patch is bigger
 
         /// <summary>
-        /// Changes the target of this detour to <paramref name="newTarget"/>.,
+        /// Changes the target of this detour to <paramref name="newTarget"/>.
         /// </summary>
         /// <remarks>
         /// If this <see cref="SimpleNativeDetour"/> was created as a result of <see cref="PlatformTriple.CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>,

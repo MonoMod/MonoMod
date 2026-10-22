@@ -71,7 +71,7 @@ namespace MonoMod.Core.Platforms
         /// </summary>
         /// <remarks>
         /// <para>This must only be called if <see cref="Features"/> includes <see cref="RuntimeFeature.DisableInlining"/>.
-        /// Typically, callers should use <see cref="PlatformTriple.TryDisableInlining(MethodBase)"/>, which automatically
+        /// Typically, callers should use <see cref="PlatformTriple.TryDisableInlining(MethodBase, RuntimeMethodHandle)"/>, which automatically
         /// checks that feature flag, calling this method if available.</para>
         /// </remarks>
         /// <param name="method">The method to disable inlining for.</param>
@@ -111,7 +111,7 @@ namespace MonoMod.Core.Platforms
         /// </summary>
         /// <remarks>
         /// <para>This must only be called if <see cref="Features"/> includes <see cref="RuntimeFeature.RequiresCustomMethodCompile"/>.
-        /// Typically, callers should use <see cref="PlatformTriple.Compile(MethodBase)"/>, which automatically calls this method
+        /// Typically, callers should use <see cref="PlatformTriple.Compile(MethodBase, RuntimeMethodHandle)"/>, which automatically calls this method
         /// when available.</para>
         /// <para>When an implementer sets the feature flag <see cref="RuntimeFeature.RequiresCustomMethodCompile"/>, it takes on the full
         /// responsibility of ensuring that a method is compiled. No additional work is done by <see cref="PlatformTriple"/>.</para>
