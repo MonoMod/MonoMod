@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace MonoMod.Core.Platforms
 {
@@ -232,7 +233,8 @@ namespace MonoMod.Core.Platforms
         /// for the same method, if possible.
         /// </remarks>
         /// <param name="method">The method to prepare.</param>
-        public void Compile(MethodBase method)
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> for the variant of <paramref name="method"/> to compile.</param>
+        public void Compile(MethodBase method, RuntimeMethodHandle handle = default)
         {
             Helpers.ThrowIfArgumentNull(method);
 
@@ -246,11 +248,14 @@ namespace MonoMod.Core.Platforms
             // if this flag is set, then the runtime implementation is solely responsible for ensuring that the method gets compiled
             if (SupportedFeatures.Has(RuntimeFeature.RequiresCustomMethodCompile))
             {
-                Runtime.Compile(method);
+                Runtime.Compile(method, handle);
             }
             else
             {
-                var handle = Runtime.GetMethodHandle(method);
+                if (handle == default)
+                {
+                    handle = Runtime.GetMethodHandle(method);
+                }
 
                 if (method.IsGenericMethod)
                 {
@@ -348,12 +353,13 @@ namespace MonoMod.Core.Platforms
         /// Tries to disable inlining of the provided method, if the underlying runtime supports it.
         /// </summary>
         /// <param name="method">The method to disable inlining of.</param>
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of the variant of <paramref name="method"/> to disable inlining on.</param>
         /// <returns><see langword="true"/> if inlining could be disabled; <see langword="false"/> otherwise.</returns>
-        public bool TryDisableInlining(MethodBase method)
+        public bool TryDisableInlining(MethodBase method, RuntimeMethodHandle handle = default)
         {
             if (SupportedFeatures.Has(RuntimeFeature.DisableInlining))
             {
-                Runtime.DisableInlining(method);
+                Runtime.DisableInlining(method, handle);
                 return true;
             }
 
@@ -433,9 +439,30 @@ namespace MonoMod.Core.Platforms
         /// <param name="fromRw">The address to write the detour to, if that is different from <paramref name="from"/>. Otherwise, the default value of <see langword="default"/> should be passed.
         /// Refer to <see cref="OnMethodCompiledCallback"/> for more information.</param>
         /// <returns>A <see cref="NativeDetour"/> instance managing the generated detour.</returns>
+        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default)
+        {
+            nint resultSlot = 0;
+            return CreateNativeDetour(from, to, ref resultSlot, detourMaxSize, fromRw);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="NativeDetour"/>. This is basically identical to <see cref="CreateSimpleDetour(IntPtr, IntPtr, int, IntPtr)"/>,
+        /// except that it generates an alternate entrypoint for <paramref name="from"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>This method will always create an alternate entrypoint in <see cref="NativeDetour.AltEntry"/> when <see cref="ArchitectureFeature.CreateAltEntryPoint"/>
+        /// is available. The created alternate entrypoint will be written to <paramref name="altEntryResult"/> BEFORE the detour is applied.</para>
+        /// </remarks>
+        /// <param name="from">The address to detour.</param>
+        /// <param name="to">The target of the detour.</param>
+        /// <param name="altEntryResult">A reference to a location to write the generated alternate entrypoint when it is created.</param>
+        /// <param name="detourMaxSize">The maximum size available for the detour.</param>
+        /// <param name="fromRw">The address to write the detour to, if that is different from <paramref name="from"/>. Otherwise, the default value of <see langword="default"/> should be passed.
+        /// Refer to <see cref="OnMethodCompiledCallback"/> for more information.</param>
+        /// <returns>A <see cref="NativeDetour"/> instance managing the generated detour.</returns>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default)
+        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, ref IntPtr altEntryResult, int detourMaxSize = -1, IntPtr fromRw = default)
         {
             if (fromRw == default)
             {
@@ -462,6 +489,7 @@ namespace MonoMod.Core.Platforms
             if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint))
             {
                 altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);
+                Volatile.Write(ref altEntryResult, altEntry);
             }
             else
             {
@@ -482,20 +510,21 @@ namespace MonoMod.Core.Platforms
         /// Gets the native method body for a method.
         /// </summary>
         /// <param name="method">The method to get the body of.</param>
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of the variant of <paramref name="method"/> to get the native body of.</param>
         /// <returns>A pointer to the native method body of the method.</returns>
-        public IntPtr GetNativeMethodBody(MethodBase method)
+        public IntPtr GetNativeMethodBody(MethodBase method, RuntimeMethodHandle handle = default)
         {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking))
             {
-                return GetNativeMethodBodyWalk(method, reloadPtr: true);
+                return GetNativeMethodBodyWalk(method, handle, reloadPtr: true);
             }
             else
             {
-                return GetNativeMethodBodyDirect(method);
+                return GetNativeMethodBodyDirect(method, handle);
             }
         }
 
-        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr)
+        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, RuntimeMethodHandle handle, bool reloadPtr)
         {
             var regenerated = false;
             var didPrepareLastIter = false;
@@ -508,7 +537,7 @@ namespace MonoMod.Core.Platforms
             nint prevEntry = -1;
 
             ReloadFuncPtr:
-            var entry = (nint)Runtime.GetMethodEntryPoint(method);
+            var entry = (nint)Runtime.GetMethodEntryPoint(method, handle);
             MMDbgLog.Trace($"Starting entry point = 0x{entry:x16}");
             do
             {
@@ -580,9 +609,9 @@ namespace MonoMod.Core.Platforms
             return entry;
         }
 
-        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method)
+        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method, RuntimeMethodHandle handle)
         {
-            return Runtime.GetMethodEntryPoint(method);
+            return Runtime.GetMethodEntryPoint(method, handle);
         }
 
         private IntPtr ThePreStub = IntPtr.Zero;
@@ -602,7 +631,7 @@ namespace MonoMod.Core.Platforms
                 var pre = typeof(System.Net.HttpWebRequest).Assembly
                     .GetType("System.Net.Connection")
                     ?.GetMethods()
-                    .GroupBy(m => GetNativeMethodBodyWalk(m, reloadPtr: false))
+                    .GroupBy(m => GetNativeMethodBodyWalk(m, default, reloadPtr: false))
                     .First(g => g.Count() > 1)
                     .Key ?? (nint)(-1);
 
