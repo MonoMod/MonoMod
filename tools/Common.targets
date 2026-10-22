@@ -10,7 +10,7 @@
     <RuntimeIdentifier></RuntimeIdentifier>
   </PropertyGroup>
   
-  <Import Project="Sdk.targets" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="1.2.39" />
+  <Import Project="Sdk.targets" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="2.0.5" />
 
   <!-- NuGet Information -->
   <Import Project="$(MMToolsPath)NuGet.targets" />
