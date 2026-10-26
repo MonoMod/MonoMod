@@ -382,7 +382,8 @@ namespace MonoMod.Core.Platforms.Memory
 
             var indexToRemove = list.Slice(0, pageCount).BinarySearch(page, new PageComparer());
 
-            if (indexToRemove < 0)
+            // a page that was already freed may find a new page at the same address
+            if (indexToRemove < 0 || list[indexToRemove] != page)
             {
                 // the page doesn't exist, nothing needs to be done
                 return false;
