@@ -28,6 +28,17 @@ namespace MonoMod.Utils
 
         private const BindingFlags _BindingFlagsAll = (BindingFlags)(-1);
 
+        // on Mono, GetAssemblies() racing DefineDynamicAssembly can create a plain assembly object for the dynamic assembly,
+        // and most members of that (GetName(), GetModules(), GetType(...)) crash the process
+        // https://github.com/mono/mono/blob/mono-6.12.0.199/mono/metadata/sre.c#L1378-L1388
+        private static bool IsOrphanedDynamicAssembly(Assembly asm)
+            => PlatformDetection.Runtime is RuntimeKind.Mono
+            && asm.GetType() == typeof(object).Assembly.GetType()
+            && asm.ManifestModule.ScopeName == "RefEmit_YouForgotToDefineAModule";
+
+        private static IEnumerable<Assembly> GetLoadedAssemblies()
+            => AppDomain.CurrentDomain.GetAssemblies().Where(asm => !IsOrphanedDynamicAssembly(asm));
+
         private static MemberInfo _Cache(string cacheKey, MemberInfo value)
         {
             if (cacheKey != null && value == null)
@@ -89,7 +100,7 @@ namespace MonoMod.Utils
             if (type != null)
                 return type;
 
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var asm in GetLoadedAssemblies())
             {
                 type = asm.GetType(name);
                 if (type != null)
@@ -364,7 +375,7 @@ namespace MonoMod.Utils
                     var split = asmName!.IndexOf(AssemblyHashNameTag, StringComparison.Ordinal);
                     if (split != -1 && int.TryParse(asmName.Substring(split + 2), out var hash))
                     {
-                        asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetHashCode() == hash).ToArray();
+                        asms = GetLoadedAssemblies().Where(other => other.GetHashCode() == hash).ToArray();
                         if (asms.Length == 0)
                             asms = null;
                         asmName = asmName.Substring(0, split);
@@ -372,9 +383,9 @@ namespace MonoMod.Utils
 
                     if (asms == null)
                     {
-                        asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().FullName == asmName).ToArray();
+                        asms = GetLoadedAssemblies().Where(other => other.GetName().FullName == asmName).ToArray();
                         if (asms.Length == 0)
-                            asms = AppDomain.CurrentDomain.GetAssemblies().Where(other => other.GetName().Name == asmName).ToArray();
+                            asms = GetLoadedAssemblies().Where(other => other.GetName().Name == asmName).ToArray();
 
                         if (asms.Length == 0 && Assembly.Load(new AssemblyName(asmName)) is Assembly loaded)
                             asms = new Assembly[] { loaded };
