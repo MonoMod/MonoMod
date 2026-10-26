@@ -1,0 +1,5 @@
+libunwind sourced from 28.2.13676358
+
+Android versions before 11 don't natively export _Unwind_ in libc,
+Some vendors may also screw stuff up. We need to statically link
+against libunwind for Android.
