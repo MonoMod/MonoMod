@@ -63,7 +63,7 @@ async Task EmitJobsForOsArch(OS os, Arch arch, Emulator? emu)
             }, osName, runtimeName);
             jobs.AddJob(new()
             {
-                Title = $"{runtimeName} {archName} (PGO Off)",
+                Title = $"{runtimeName} {archName} (PGO On)",
                 OS = os,
                 Dotnet = jobDotnet,
                 Arch = arch.RidName,
