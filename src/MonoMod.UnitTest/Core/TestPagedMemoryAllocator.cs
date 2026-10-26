@@ -92,5 +92,62 @@ namespace MonoMod.UnitTest.Core
                 it.Dispose();
             }
         }
+
+        private sealed class ReusingMemoryAllocator : PagedMemoryAllocator
+        {
+            public ReusingMemoryAllocator() : base(0x1000)
+            {
+            }
+
+            public int FreedPages;
+            public Action? OnFree;
+
+            protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
+            {
+                // every new page gets the same address, like the OS reusing the address of a freed page
+                var page = new Page(this, (nint)0x10000, (uint)PageSize, request.Executable);
+                InsertAllocatedPage(page);
+                var result = page.TryAllocate((uint)request.Size, (uint)request.Alignment, out var pageAlloc);
+                allocated = pageAlloc;
+                return result;
+            }
+
+            protected override bool TryAllocateNewPage(PositionedAllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
+                => TryAllocateNewPage(request.Base, out allocated);
+
+            protected override bool TryFreePage(Page page, [NotNullWhen(false)] out string? errorMsg)
+            {
+                FreedPages++;
+                var onFree = OnFree;
+                OnFree = null;
+                onFree?.Invoke();
+                errorMsg = null;
+                return true;
+            }
+        }
+
+        [Fact]
+        public void FreedPageAddressCanBeReused()
+        {
+            var memAllocator = new ReusingMemoryAllocator();
+
+            // emptying the same page twice queues it for cleanup twice
+            Assert.True(memAllocator.TryAllocate(new(16), out var first));
+            first.Dispose();
+            Assert.True(memAllocator.TryAllocate(new(16), out var second));
+            second.Dispose();
+
+            // someone else gets a new page at the same address as soon as the old one is freed
+            IAllocatedMemory? reused = null;
+            memAllocator.OnFree = () => memAllocator.TryAllocate(new(16), out reused);
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            Assert.NotNull(reused);
+            Assert.Equal(1, memAllocator.FreedPages);
+            reused.Dispose();
+        }
     }
 }
