@@ -31,6 +31,90 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>lib/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>lib/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>lib/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>lib/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
     <Left>lib/net35/MonoMod.Core.dll</Left>
     <Right>lib/net35/MonoMod.Core.dll</Right>
@@ -55,6 +139,90 @@
     <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
     <Left>lib/net35/MonoMod.Core.dll</Left>
     <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
@@ -87,6 +255,90 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>lib/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>lib/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>lib/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>lib/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
     <Left>lib/net5.0/MonoMod.Core.dll</Left>
     <Right>lib/net5.0/MonoMod.Core.dll</Right>
@@ -111,6 +363,90 @@
     <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
     <Left>lib/net5.0/MonoMod.Core.dll</Left>
     <Right>lib/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>lib/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>lib/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>lib/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>lib/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
@@ -143,6 +479,90 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>lib/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>lib/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>lib/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>lib/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
     <Left>lib/net7.0/MonoMod.Core.dll</Left>
     <Right>lib/net7.0/MonoMod.Core.dll</Right>
@@ -167,6 +587,90 @@
     <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
     <Left>lib/net7.0/MonoMod.Core.dll</Left>
     <Right>lib/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>lib/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>lib/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>lib/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>lib/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
@@ -199,6 +703,90 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>lib/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>lib/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>lib/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>lib/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
     <Left>lib/net9.0/MonoMod.Core.dll</Left>
     <Right>lib/net9.0/MonoMod.Core.dll</Right>
@@ -227,6 +815,90 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>lib/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>lib/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>lib/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>lib/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
     <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
@@ -255,6 +927,90 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
     <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
@@ -279,6 +1035,90 @@
     <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
     <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.RequiresGenericContext(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.Compile(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetNativeMethodBody(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.GetRealDetourTarget(System.Reflection.MethodBase,System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.PlatformTriple.TryDisableInlining(System.Reflection.MethodBase)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
@@ -297,6 +1137,13 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>lib/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net10.0/MonoMod.Core.dll</Left>
     <Right>lib/net10.0/MonoMod.Core.dll</Right>
@@ -326,6 +1173,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net10.0/MonoMod.Core.dll</Left>
+    <Right>ref/net10.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net35/MonoMod.Core.dll</Left>
     <Right>lib/net35/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -333,6 +1229,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/net35/MonoMod.Core.dll</Left>
     <Right>lib/net35/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -363,6 +1266,55 @@
     <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
     <Left>lib/net35/MonoMod.Core.dll</Left>
     <Right>lib/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net35/MonoMod.Core.dll</Left>
+    <Right>ref/net35/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
   <Suppression>
@@ -381,6 +1333,13 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>lib/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net452/MonoMod.Core.dll</Left>
     <Right>lib/net452/MonoMod.Core.dll</Right>
@@ -410,6 +1369,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net452/MonoMod.Core.dll</Left>
+    <Right>ref/net452/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net5.0/MonoMod.Core.dll</Left>
     <Right>lib/net5.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -417,6 +1425,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>lib/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/net5.0/MonoMod.Core.dll</Left>
     <Right>lib/net5.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -452,6 +1467,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net5.0/MonoMod.Core.dll</Left>
+    <Right>ref/net5.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net6.0/MonoMod.Core.dll</Left>
     <Right>lib/net6.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -459,6 +1523,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>lib/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/net6.0/MonoMod.Core.dll</Left>
     <Right>lib/net6.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -494,6 +1565,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net6.0/MonoMod.Core.dll</Left>
+    <Right>ref/net6.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net7.0/MonoMod.Core.dll</Left>
     <Right>lib/net7.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -501,6 +1621,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>lib/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/net7.0/MonoMod.Core.dll</Left>
     <Right>lib/net7.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -536,6 +1663,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net7.0/MonoMod.Core.dll</Left>
+    <Right>ref/net7.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net8.0/MonoMod.Core.dll</Left>
     <Right>lib/net8.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -543,6 +1719,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>lib/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/net8.0/MonoMod.Core.dll</Left>
     <Right>lib/net8.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -578,6 +1761,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net8.0/MonoMod.Core.dll</Left>
+    <Right>ref/net8.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/net9.0/MonoMod.Core.dll</Left>
     <Right>lib/net9.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -585,6 +1817,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>lib/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/net9.0/MonoMod.Core.dll</Left>
     <Right>lib/net9.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -620,6 +1859,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/net9.0/MonoMod.Core.dll</Left>
+    <Right>ref/net9.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -627,6 +1915,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.0/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -662,6 +1957,55 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/netstandard2.0/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.0/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
     <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -669,6 +2013,13 @@
   <Suppression>
     <DiagnosticId>CP0006</DiagnosticId>
     <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
     <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -699,6 +2050,55 @@
     <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
     <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
     <Right>lib/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.Compile(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.DisableInlining(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetAsyncVariantRealDetourTarget(MonoMod.Core.Platforms.GetAsyncVariantRealDetourTargetArgs,MonoMod.Core.Platforms.AbiArgumentMap,System.IDisposable@)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodAbiFlags(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.GetMethodEntryPoint(System.Reflection.MethodBase,System.RuntimeMethodHandle)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase,MonoMod.Core.Platforms.RuntimeAsyncMethodInfo@)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0006</DiagnosticId>
+    <Target>M:MonoMod.Core.Platforms.ISystem.FlushInstructionCache(System.IntPtr,System.UIntPtr)</Target>
+    <Left>lib/netstandard2.1/MonoMod.Core.dll</Left>
+    <Right>ref/netstandard2.1/MonoMod.Core.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
 </Suppressions>

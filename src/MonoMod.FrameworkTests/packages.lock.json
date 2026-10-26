@@ -101,21 +101,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -125,7 +125,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -220,21 +220,21 @@
         "resolved": "0.10.4",
         "contentHash": "BHukPf7zfXu+akTcFEAWvU4x3hVMMIDC+ihGAl/+8OozrY0f/ajrpuaSUf2Q3Xvgsge5NryvOkjtyhV5TNXoSg=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.10.4, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.10.4, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -244,7 +244,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -345,21 +345,21 @@
         "resolved": "4.5.0",
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -369,7 +369,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -541,23 +541,23 @@
         "resolved": "6.1.2",
         "contentHash": "2hBr6zdbIBTDE3EhK7NSVNdX58uTK6iHW/P/Axmm9sl1xoGSLqDvMtpecn226TNwHByFokYwJmt/aQQNlO5CRw=="
       },
-      "monomod.core": {
+      "iced": {
         "type": "Project",
         "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
         }
       },
-      "MonoMod.Iced": {
+      "monomod.core": {
         "type": "Project",
         "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
         }
@@ -569,7 +569,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )",
           "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
           "System.Reflection.Emit.Lightweight": "[4.7.0, )"
         }
@@ -697,21 +697,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -721,7 +721,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -833,21 +833,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -857,7 +857,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -969,21 +969,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -993,7 +993,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1105,21 +1105,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -1129,7 +1129,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1241,21 +1241,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -1265,7 +1265,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1377,21 +1377,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -1401,7 +1401,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1513,21 +1513,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -1537,7 +1537,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
@@ -1649,21 +1649,21 @@
         "resolved": "10.0.13",
         "contentHash": "ZlcywyQ7FJmgOV2nctdfOEPGS0kRK8T2CdOoPr6F4HPYpmjSo6GQfj3yTyOzNO6B+2U84/JKSPkJJMWqLmVsMw=="
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.runtimedetour": {
@@ -1673,7 +1673,7 @@
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.Core": "[1.4.0-alpha.dev, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Utils": "[25.0.15-alpha.dev, )"
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.utils": {
