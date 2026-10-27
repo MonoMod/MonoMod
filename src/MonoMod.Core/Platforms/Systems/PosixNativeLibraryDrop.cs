@@ -95,7 +95,7 @@ internal abstract class PosixNativeLibraryDrop
             {
                 // SafeFileHandle overload of FileStream constructor is recommended, but it's missing on some old Unity mono builds.
 #pragma warning disable CS0618 // Type or member is obsolete
-                using var fs = new FileStream(fd, FileAccess.Write);
+                using var fs = new FileStream(fd, FileAccess.Write, false);
 #pragma warning restore CS0618 // Type or member is obsolete
                 sourceStream.CopyTo(fs);
             }
