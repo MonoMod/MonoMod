@@ -702,13 +702,21 @@ namespace MonoMod.Core.Platforms
             // RyuJITx86, so there is no value in optimizing for that scenario.
             var requiresGenericContextFixup = HasGenericContext(Abi) && Runtime.RequiresGenericContext(fromInfo);
 
+            // On Mono, a generic target only gets its type arguments when it is called, not when jumped to.
+            var requiresGenericTargetFixup = Runtime.Target is RuntimeKind.Mono
+                && (toInfo.IsGenericMethod || toInfo.DeclaringType is { IsGenericType: true });
+
             // Check if a fixup is needed for the current scenario.
-            if (!requiresReturnBufferFixup && !requiresGenericContextFixup)
+            if (!requiresReturnBufferFixup && !requiresGenericContextFixup && !requiresGenericTargetFixup)
             {
                 // `from` and `to` are considered compatible at this point.
                 // Thus, no ABI fixups are needed, return `to` as is.
                 return to;
             }
+
+            // Only the call is needed, so keep the signature of `from`. Mono moves the return buffer depending on the first argument type.
+            if (!requiresReturnBufferFixup && !requiresGenericContextFixup)
+                hasReturnBuffer = false;
 
             var returnBufferType = hasReturnBuffer ? returnType.MakeByRefType() : returnType;
             var newReturnType = hasReturnBuffer && !Abi.ReturnsReturnBuffer ? typeof(void) : returnBufferType;
