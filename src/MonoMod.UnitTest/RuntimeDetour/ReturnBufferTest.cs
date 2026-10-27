@@ -26,6 +26,30 @@ namespace MonoMod.UnitTest
             Assert.True(Source(0, 0, 0, 0) is { f1: 4, f2: 5, f3: 6 });
         }
 
+        [Fact]
+        public void TestReturnBufferDetourOnStruct()
+        {
+            var value = new StructSource { f = 1 };
+
+            using var hook = new Hook(
+                typeof(StructSource).GetMethod("Source", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!,
+                typeof(ReturnBufferSysVTest).GetMethod("StructTarget", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!,
+                true
+            );
+
+            Assert.True(value.Source(2) is { f1: 1, f2: 2, f3: 3 });
+        }
+
+        internal struct StructSource
+        {
+            public ulong f;
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            internal TestStruct Source(ulong a) => default;
+        }
+
+        internal static TestStruct StructTarget(ref StructSource self, ulong a) => new TestStruct() { f1 = self.f, f2 = a, f3 = 3 };
+
         internal struct TestStruct
         {
             public ulong f1, f2, f3; // 24 bytes
