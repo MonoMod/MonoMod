@@ -18,7 +18,8 @@ using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest
 {
-    [Collection("RuntimeDetour")]
+    [CollectionDefinition(nameof(AssemblyLoadContextHookTest), DisableParallelization = true)]
+    [Collection(nameof(AssemblyLoadContextHookTest))]
     public class AssemblyLoadContextHookTest : TestBase
     {
 
