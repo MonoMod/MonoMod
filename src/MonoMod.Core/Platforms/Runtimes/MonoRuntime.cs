@@ -40,7 +40,7 @@ namespace MonoMod.Core.Platforms.Runtimes
                 case TypeCode.Empty:
                     // size == 0???
                     return TypeClassification.InRegister;
-                case TypeCode.Object:
+                case TypeCode.Object when !type.IsValueType:
                 case TypeCode.DBNull:
                 case TypeCode.String:
                     // reference types
@@ -87,7 +87,10 @@ namespace MonoMod.Core.Platforms.Runtimes
         private static TypeClassification ClassifyValueType(Type type, bool isReturn)
         {
             // this is implemented by mini-amd64.c add_valuetype
-            var size = type.GetManagedSize();
+            // Mono's size is rounded up to the stack slot size (pointer size), see mini_type_stack_size_full in
+            // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-amd64.c#L643
+            var stackSlotSize = IntPtr.Size;
+            var size = (type.GetManagedSize() + stackSlotSize - 1) & ~(stackSlotSize - 1);
 
             var passOnStack = (!isReturn || size is not 8) && (isReturn || size > 16);
 
@@ -176,10 +179,9 @@ namespace MonoMod.Core.Platforms.Runtimes
                     };
                 }
                 // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
-                if (PlatformDetection.OS is OSKind.Windows or OSKind.Wine && PlatformDetection.Architecture is ArchitectureKind.x86_64 or ArchitectureKind.x86)
+                if (PlatformDetection.Architecture is ArchitectureKind.x86_64 or ArchitectureKind.x86)
                 {
-                    // on x86_64, it seems like Mono always uses this, ret, args order
-                    // TODO: there are probably other platforms that have this same argument order, 
+                    // Mono passes the return buffer after this on every OS (get_call_info in mini-amd64.c and mini-x86.c)
                     abi = abi with
                     {
                         ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments }
