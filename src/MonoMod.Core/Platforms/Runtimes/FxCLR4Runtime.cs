@@ -40,7 +40,11 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             var md = (V48.MethodDesc*)handle.Value;
 
-            md = V48.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+            // https://github.com/dotnet/runtime/blob/70ae3df4a6f3c92fb6b315afc405edd10ff38579/src/coreclr/vm/genmeth.cpp#L1061-L1072
+            if (md->IsUnboxingStub && (!md->HasMethodInstantiation || md->IsGenericMethodDefinition))
+                md = V48.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+            else if (md->IsInstantiatingStub && md->TryAsInstantiated(out var inst))
+                md = inst->IMD_GetWrappedMethodDesc();
 
             var ptr = (IntPtr)md->GetNativeCode();
 
