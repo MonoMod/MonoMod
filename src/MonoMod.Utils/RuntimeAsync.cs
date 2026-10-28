@@ -322,6 +322,42 @@ namespace MonoMod.Utils
         public static MethodInfo UnsafeAwaitAwaiter => GetHolder().UnsafeAwaitAwaiter;
 #pragma warning restore CA1200 // Avoid using cref tags with a prefix
 
+        /// <summary>
+        /// Tests if <paramref name="type"/> is a supported runtime-async return type.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns><see langword="true"/> if <paramref name="type"/> is a supported runtime-async 
+        /// return type; <see langword="false"/> if it is not.</returns>
+        public static bool IsSupportedReturnType(Type type)
+        {
+            var holder = GetHolder();
+            if (type.IsGenericType)
+            {
+                var genericTypeDef = type.GetGenericTypeDefinition();
+                if (genericTypeDef == holder.T_TaskT)
+                {
+                    return true;
+                }
+                else if (genericTypeDef == holder.T_ValueTaskT)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (type == holder.T_Task)
+                {
+                    return true;
+                }
+                else if (type == holder.T_ValueTask)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static void EmitAwait(ILGenerator il, Type awaitableType)
         {
             Helpers.ThrowIfArgumentNull(il);

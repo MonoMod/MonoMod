@@ -1,6 +1,7 @@
-﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
+﻿#if METHODBUILDER_SUPPORTED
 using MonoMod.Backports;
 using MonoMod.Logs;
+using MonoMod.Utils.DMDGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,7 +21,7 @@ namespace MonoMod.Utils
         {
             var typeBuilder = context as TypeBuilder;
 
-            var method = GenerateMethodBuilder(dmd, typeBuilder);
+            var method = GenerateMethodBuilder(dmd, typeBuilder, out var refsHolder);
             typeBuilder = (TypeBuilder)method.DeclaringType!;
             var type = typeBuilder.CreateType();
 
@@ -49,11 +50,14 @@ namespace MonoMod.Utils
                 type = ReflectionHelper.Load(stream).GetType(typeBuilder.FullName!, true, false)!;
 #endif
             }
+
+            refsHolder.SetFields(type);
+
             return type.GetMethod(method.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
                 ?? throw new InvalidOperationException("Could not find generated method");
         }
 
-        public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder)
+        internal static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder, out GeneratedAssemblyReferenceHolder refHolder)
         {
             Helpers.ThrowIfArgumentNull(dmd);
             var orig = dmd.OriginalMethod;
@@ -236,7 +240,14 @@ namespace MonoMod.Utils
             }
             mb.SetImplementationFlags((MethodImplAttributes)implAttrs);
 
-            _DMDEmit.Generate(dmd, mb, il);
+            refHolder = new GeneratedAssemblyReferenceHolder();
+            _DMDEmit.Generate(dmd, mb, il, refHolder);
+
+            if (refHolder.NeedsReferencesField)
+            {
+                var refsField = typeBuilder.DefineField("references", typeof(object), FieldAttributes.Static);
+                refHolder.SetReferencesFieldName(refsField.Name);
+            }
 
             return mb;
         }

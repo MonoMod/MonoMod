@@ -1,4 +1,5 @@
-﻿using MonoMod.Logs;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
@@ -358,19 +359,26 @@ namespace MonoMod.Core.Platforms
                 // a thin thunk to the normal variant, we can stick to only detouring the ordinary variant.
                 && !srcAsyncInfo.AsyncVariantFlags.Has(RuntimeAsyncVariantFlags.IsThunk))
             {
+                var ordinaryDst = target;
+                var asyncDst = target;
+
                 // this method has a real async variant that we need to detour specially.
                 // In this case, the target MUST also be recognized by the runtime's async machinery,
                 // though it doesn't matter whether the variants are thunks in that case.
                 if (!triple.Runtime.TryGetRuntimeAsyncInfo(target, out var tgtAsyncInfo))
                 {
-                    throw new ArgumentException(
-                        DebugFormatter.Format($"Detour source method {source} is recognized by the runtime's async functionality, " +
-                        $"but the target method {target} is not."), "request.Target");
+                    // This can happen (and in fact is a fairly expected case) since when DynamicMethods return task types,
+                    // CoreCLR does not generate async variants for it. 
+
+                    MMDbgLog.Trace($"Generating async wrapper for target method {target}");
+                    asyncDst = CreateAsyncMethodVariant((MethodInfo)target);
+                    Helpers.Assert(triple.Runtime.TryGetRuntimeAsyncInfo(asyncDst, out tgtAsyncInfo));
                 }
 
                 detour = CreateAsyncDetour(
                     source, srcAsyncInfo,
-                    target, tgtAsyncInfo);
+                    ordinaryDst,
+                    asyncDst, tgtAsyncInfo);
             }
             else
             {
@@ -527,8 +535,38 @@ namespace MonoMod.Core.Platforms
             }
         }
 
+        private static MethodInfo CreateAsyncMethodVariant(MethodInfo targetMethod)
+        {
+            Helpers.Assert(RuntimeAsync.IsSupportedReturnType(targetMethod.ReturnType));
+
+            var sig = MethodSignature.ForMethod(targetMethod);
+            using var dmd = sig.CreateDmd(DebugFormatter.Format($"[async]{targetMethod.Name}"));
+
+            // we emit the equivalent of "=> await Original(...);" as an IsAsync method to ensure we get an async backend
+
+            dmd.IsAsync = true;
+            var il = dmd.GetILProcessor();
+            for (var i = 0; i < sig.ParameterCount; i++)
+            {
+                il.Emit(OpCodes.Ldarg, i);
+            }
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(targetMethod));
+            RuntimeAsync.EmitAwait(il, dmd.Module.ImportReference(sig.ReturnType));
+            il.Emit(OpCodes.Ret);
+
+            return dmd.Generate();
+        }
+
+        /// <param name="ordinaryDst">The <see cref="MethodBase"/> for the method used for the ordinary method of <paramref name="src"/> (when that's needed)</param>
+        /// <param name="dst">The <see cref="MethodBase"/> for the method used for the async method, with its RuntimeAsync info in <paramref name="dstAsyncInfo"/></param>
+        /// <remarks>
+        /// If <paramref name="ordinaryDst"/> == <paramref name="dst"/>, the ordinary detour should detor to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.NormalVariant"/>.
+        /// If they are different, then resolve <paramref name="ordinaryDst"/>'s method handle normally and use that.
+        /// The async variant of <paramref name="srcAsyncInfo"/> is always detoured to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.AsyncVariant"/>.
+        /// </remarks>
         private ICoreDetour CreateAsyncDetour(
             MethodBase src, RuntimeAsyncMethodInfo srcAsyncInfo,
+            MethodBase ordinaryDst,
             MethodBase dst, RuntimeAsyncMethodInfo dstAsyncInfo)
         {
             throw new NotImplementedException();
