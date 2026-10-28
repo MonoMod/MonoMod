@@ -156,6 +156,18 @@ namespace MonoMod.Core.Platforms.Runtimes
             "We don't want those exceptions propagating higher up the stack though.")]
         public virtual RuntimeMethodHandle GetMethodHandle(MethodBase method)
         {
+            var handle = GetMethodHandleCore(method);
+
+            if (TryGetNonStubMethodHandle(handle, out var nonStub))
+            {
+                return nonStub;
+            }
+
+            return handle;
+        }
+
+        private RuntimeMethodHandle GetMethodHandleCore(MethodBase method)
+        {
             // Compile the method handle before getting our hands on the final method handle.
             if (method is DynamicMethod dm)
             {
@@ -407,11 +419,12 @@ namespace MonoMod.Core.Platforms.Runtimes
                 // method instead of just the unboxing stub. The RuntimeMethodHandle we got from the MethodBase
                 // points to the unboxing stub. We could use knowledge of the runtime to get the non-unboxing stub
                 // MethodDesc, then create a RuntimeMethodHandle for it, however that may change per-runtime.
-                // If we want to implement that, we can implement TryGetCacnonicalMethodHandle.
+                // If we want to implement that, we can implement TryGetCanonicalMethodHandle.
 
-                if (TryGetCanonicalMethodHandle(ref handle))
+
+                if (TryGetNonStubMethodHandle(handle, out var nonStub))
                 {
-                    Helpers.Assert(TryInvokeBclCompileMethod(handle));
+                    Helpers.Assert(TryInvokeBclCompileMethod(nonStub));
                 }
                 else
                 {
@@ -428,7 +441,11 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
         }
 
-        protected virtual bool TryGetCanonicalMethodHandle(ref RuntimeMethodHandle handle) => false;
+        protected virtual bool TryGetNonStubMethodHandle(RuntimeMethodHandle handle, out RuntimeMethodHandle outHandle)
+        {
+            outHandle = default;
+            return false;
+        }
 
         // pinning isn't usually needed in fx/core
         public virtual IDisposable? PinMethodIfNeeded(MethodBase method)
@@ -473,7 +490,10 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             method = GetIdentifiable(method);
 
-            if (handle == default && method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
+            // note: if handle != GetMethodHandleCore(), then it's probably actually pointing to the real method and not an unboxing stub.
+            var handleIsDefaultReflectionHandle = handle == default || handle == GetMethodHandleCore(method);
+
+            if (handleIsDefaultReflectionHandle && method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
             {
                 /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
                  * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation

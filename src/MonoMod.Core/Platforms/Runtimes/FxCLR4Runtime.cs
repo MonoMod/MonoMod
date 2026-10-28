@@ -36,6 +36,19 @@ namespace MonoMod.Core.Platforms.Runtimes
         public override RuntimeFeature Features
             => base.Features & ~RuntimeFeature.RequiresBodyThunkWalking;
 
+        /* TODO: set up the same kind of initialization for RuntimeMethodHandles as we do on coreclr
+        protected override unsafe bool TryGetNonStubMethodHandle(RuntimeMethodHandle handle, out RuntimeMethodHandle outHandle)
+        {
+            // don't accidentally run this in a derived type
+            if (GetType() != typeof(FxCLR4Runtime))
+            {
+                return base.TryGetNonStubMethodHandle(handle, out outHandle);
+            }
+
+            var md = (V48.MethodDesc*)handle.Value;
+        }
+        */
+
         private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle)
         {
             var md = (V48.MethodDesc*)handle.Value;
