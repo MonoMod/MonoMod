@@ -133,6 +133,33 @@ namespace MonoMod.UnitTest
             Assert.Equal(21, Run(call(7, 3)));
         }
 
+        // An ordinary Task-returning method also gets an async-convention variant, a separate MethodDesc
+        // that reflection resolves to the same MethodInfo. Runtime-async callers use that variant. The JIT
+        // hook must not treat its compilation as a re-JIT of the ordinary method (#344).
+        [Fact]
+        public void AsyncVariantCompiledAfterHookDoesNotCorruptHookedTaskMethod()
+        {
+            var method = GetMethod(nameof(SyncReturnsTaskCold));
+            Assert.False(method.MethodImplementationFlags.HasFlag(AsyncImpl));
+            var call = method.CreateDelegate<Func<int, int, Task<int>>>();
+            Assert.Equal(21, Run(call(7, 3)));
+
+            using (new Hook(
+                method,
+                new Func<Func<int, int, Task<int>>, int, int, Task<int>>((orig, a, b) => orig(a, b + 1))
+            ))
+            {
+                Assert.Equal(28, Run(call(7, 3)));
+                // First runtime-async call compiles the async variant while the hook is applied.
+                // The variant is not hooked, so this caller still sees the original result.
+                Assert.Equal(21, Run(CallSyncReturnsTaskColdFromAsync(7, 3)));
+                Assert.Equal(28, Run(call(7, 3)));
+            }
+
+            Assert.Equal(21, Run(call(7, 3)));
+            Assert.Equal(21, Run(CallSyncReturnsTaskColdFromAsync(7, 3)));
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static async Task<int> CompletedSum(int a, int b)
         {
@@ -149,6 +176,18 @@ namespace MonoMod.UnitTest
         private static async Task<int> CallCompletedSumFromAsync(int a, int b)
         {
             return await CompletedSum(a, b).ConfigureAwait(false);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Task<int> SyncReturnsTaskCold(int a, int b)
+        {
+            return Task.FromResult(a * b);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static async Task<int> CallSyncReturnsTaskColdFromAsync(int a, int b)
+        {
+            return await SyncReturnsTaskCold(a, b);
         }
 
         private static int Run(Task<int> task) => task.GetAwaiter().GetResult();

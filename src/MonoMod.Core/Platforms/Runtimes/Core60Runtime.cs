@@ -265,6 +265,14 @@ namespace MonoMod.Core.Platforms.Runtimes
         private unsafe void CompileMethodHookPostCommon(V21.CORINFO_METHOD_INFO* methodInfo, byte** nativeEntry, uint* nativeSizeOfCode, IntPtr rwEntry)
         {
             // This is the top level JIT entry point, do our custom stuff
+
+            // .NET 11 runtime-async compiles a second body for Task/ValueTask-returning methods: the async
+            // variant, with a hidden continuation argument and the continuation returned in a register. It is
+            // a separate MethodDesc that reflection resolves to the ordinary MethodBase. Reporting it here would
+            // apply the ordinary method's detours to code with a different ABI, so skip it.
+            if ((methodInfo->args.callConv & V21.CORINFO_CALLCONV_ASYNCCALL) != 0)
+                return;
+
             RuntimeTypeHandle[]? genericClassArgs = null;
             RuntimeTypeHandle[]? genericMethodArgs = null;
 

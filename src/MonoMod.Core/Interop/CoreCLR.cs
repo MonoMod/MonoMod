@@ -64,6 +64,9 @@ namespace MonoMod.Core.Interop
                 public IntPtr* methInst; // CORINFO_CLASS_HANDLE* // (representative, not exact) instantiation for method type variables in signature
             }
 
+            // CorInfoCallConv bit of a method body compiled with the runtime-async calling convention (.NET 11+).
+            public const int CORINFO_CALLCONV_ASYNCCALL = 0x100;
+
             [StructLayout(LayoutKind.Sequential)]
             public struct CORINFO_SIG_INFO
             {
