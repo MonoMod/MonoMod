@@ -35,7 +35,12 @@ namespace MonoMod.UnitTest
             if (useByteOverload)
                 il.Emit(OpCodes.Ldc_I4_S, unchecked((byte)value));
             else
+#if NET8_0_OR_GREATER
                 il.Emit(OpCodes.Ldc_I4_S, (sbyte)value);
+#else
+                // Before .NET 8, the nonvirtual sbyte overload does not forward to the proxy.
+                il.GetProxiedShim().Emit(OpCodes.Ldc_I4_S, (sbyte)value);
+#endif
             il.Emit(OpCodes.Ret);
 
             Assert.Equal((sbyte)value, Assert.IsType<sbyte>(dmd.Definition.Body.Instructions[0].Operand));
