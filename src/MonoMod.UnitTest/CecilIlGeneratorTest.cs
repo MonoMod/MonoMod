@@ -1,4 +1,5 @@
 ﻿using Mono.Cecil;
+using MonoMod.Utils;
 using MonoMod.Utils.Cil;
 using System.IO;
 using System.Reflection;
@@ -14,6 +15,31 @@ namespace MonoMod.UnitTest
     {
         public CecilIlGeneratorTest(ITestOutputHelper helper) : base(helper)
         {
+        }
+
+        [Theory]
+        [InlineData(-128, false)]
+        [InlineData(-128, true)]
+        [InlineData(-1, false)]
+        [InlineData(-1, true)]
+        [InlineData(0, false)]
+        [InlineData(0, true)]
+        [InlineData(9, false)]
+        [InlineData(9, true)]
+        [InlineData(127, false)]
+        [InlineData(127, true)]
+        public void TestLdcI4SEmit(int value, bool useByteOverload)
+        {
+            using var dmd = new DynamicMethodDefinition("TestLdcI4S", typeof(int), []);
+            var il = dmd.GetILGenerator();
+            if (useByteOverload)
+                il.Emit(OpCodes.Ldc_I4_S, unchecked((byte)value));
+            else
+                il.Emit(OpCodes.Ldc_I4_S, (sbyte)value);
+            il.Emit(OpCodes.Ret);
+
+            Assert.Equal((sbyte)value, Assert.IsType<sbyte>(dmd.Definition.Body.Instructions[0].Operand));
+            Assert.Equal(value, dmd.Generate().Invoke(null, null));
         }
 
         [Fact]

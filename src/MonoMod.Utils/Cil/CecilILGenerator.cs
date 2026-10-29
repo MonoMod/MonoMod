@@ -201,6 +201,8 @@ namespace MonoMod.Utils.Cil
             if (opcode.OperandType == SRE.OperandType.ShortInlineVar ||
                 opcode.OperandType == SRE.OperandType.InlineVar)
                 _EmitInlineVar(CecilILGenerator._(opcode), arg);
+            else if (opcode == SRE.OpCodes.Ldc_I4_S)
+                Emit(IL.Create(CecilILGenerator._(opcode), unchecked((sbyte)arg)));
             else
                 Emit(IL.Create(CecilILGenerator._(opcode), arg));
         }
