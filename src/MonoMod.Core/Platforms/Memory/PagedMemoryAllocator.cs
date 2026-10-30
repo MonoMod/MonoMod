@@ -522,33 +522,40 @@ namespace MonoMod.Core.Platforms.Memory
                     var lowIdx = targetIndex - 1;
                     var highIdx = targetIndex;
 
-                    while ((uint)highIdx <= AllocList.Length && (uint)lowIdx < AllocList.Length
-                        && (lowIdx >= lowIdxBound || highIdx < highIdxBound))
+                    bool didStep;
+                    do
                     {
+                        didStep = false;
+
                         // try high pages, while they're closer than low pages
                         while (
                             (uint)highIdx < AllocList.Length &&
                             highIdx < highIdxBound &&
-                            (lowIdx < lowIdxBound || target - AllocList[lowIdx].BaseAddr > AllocList[highIdx].BaseAddr - target)
+                            (lowIdx < lowIdxBound || 
+                                ((uint)lowIdx < AllocList.Length && target - AllocList[lowIdx].BaseAddr >= AllocList[highIdx].BaseAddr - target))
                         )
                         {
                             if (TryAllocWithPage(AllocList[highIdx], request, out allocated))
                                 return true;
                             highIdx++;
+                            didStep = true;
                         }
 
                         // then try low pages, while they're closer than high pages
                         while (
                             (uint)lowIdx < AllocList.Length &&
                             lowIdx >= lowIdxBound &&
-                            (highIdx >= highIdxBound || target - AllocList[lowIdx].BaseAddr < AllocList[highIdx].BaseAddr - target)
+                            (highIdx >= highIdxBound ||
+                                ((uint)highIdx < AllocList.Length && target - AllocList[lowIdx].BaseAddr <= AllocList[highIdx].BaseAddr - target))
                         )
                         {
                             if (TryAllocWithPage(AllocList[lowIdx], request, out allocated))
                                 return true;
-                            lowIdx++;
+                            lowIdx--;
+                            didStep = true;
                         }
                     }
+                    while (didStep);
 
                     // if we fall out here, no adequate page was found
                 }
