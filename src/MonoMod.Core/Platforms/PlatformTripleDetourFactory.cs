@@ -576,10 +576,15 @@ namespace MonoMod.Core.Platforms
             return dmd.Generate();
         }
 
+        /// <param name="src"></param>
+        /// <param name="srcAsyncInfo"></param>
+        /// <param name="logicalDst"></param>
         /// <param name="normalDst">The <see cref="MethodBase"/> for the method used for the ordinary method of <paramref name="src"/> (when that's needed)</param>
         /// <param name="asyncDst">The <see cref="MethodBase"/> for the method used for the async method, with its RuntimeAsync info in <paramref name="dstAsyncInfo"/></param>
+        /// <param name="dstAsyncInfo"></param>
         /// <remarks>
-        /// If <paramref name="normalDst"/> == <paramref name="asyncDst"/>, the ordinary detour should detor to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.NormalVariant"/>.
+        /// If <paramref name="normalDst"/> == <paramref name="asyncDst"/>, the ordinary detour should detour to <c><paramref name="dstAsyncInfo"/>
+        /// .<see cref="RuntimeAsyncMethodInfo.NormalVariant"/></c>.
         /// If they are different, then resolve <paramref name="normalDst"/>'s method handle normally and use that.
         /// The async variant of <paramref name="srcAsyncInfo"/> is always detoured to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.AsyncVariant"/>.
         /// </remarks>
@@ -639,6 +644,8 @@ namespace MonoMod.Core.Platforms
                 AsyncArgumentMap = asyncArgMap;
             }
 
+            [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+                Justification = "All disposables correctly end up where they need to be, and will be cleaned up when appropriate.")]
             private unsafe (MethodInfo AsyncDst, RuntimeMethodHandle AsyncDstHandle) BuildNewAsyncVariantTarget(out IntPtr* realTargetSlot)
             {
                 // we need to rebuild this each time the async variant is recompiled, since the JIT makes no attempt

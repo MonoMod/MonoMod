@@ -198,10 +198,10 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public virtual MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        public virtual MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default)
         {
             // The only flag this base impl cares about is the generic context, for now
-            return MethodRequiresGenericContext(method, handle) ? MethodAbiFlags.HasGenericContext : 0;
+            return MethodRequiresGenericContext(method, handle) && usage is MethodAbiUsage.RealMethodBody ? MethodAbiFlags.HasGenericContext : 0;
         }
 
         protected virtual bool MethodRequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)

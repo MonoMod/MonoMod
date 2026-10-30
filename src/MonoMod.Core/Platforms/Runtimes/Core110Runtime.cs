@@ -153,7 +153,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             return true;
         }
 
-        public override unsafe MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        public override unsafe MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default)
         {
             if (handle == default)
             {
@@ -164,13 +164,14 @@ namespace MonoMod.Core.Platforms.Runtimes
 
             MethodAbiFlags result = 0;
 
+            // async variants always take the abi continuation, even on the normal entry
             if (md->IsAsyncVariantMethod())
             {
                 result |= MethodAbiFlags.HasAsyncContinuation;
             }
 
             // TODO: implement generic sharing checks in terms of the MethodDesc stuff
-            if (MethodRequiresGenericContext(method, handle))
+            if (MethodRequiresGenericContext(method, handle) && usage is MethodAbiUsage.RealMethodBody)
             {
                 result |= MethodAbiFlags.HasGenericContext;
             }
@@ -185,10 +186,10 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             handle = null;
 
-            var fromAbiFlags = GetMethodAbiFlags(args.From, args.FromAsyncVariant);
+            var fromAbiFlags = GetMethodAbiFlags(MethodAbiUsage.RealMethodBody, args.From, args.FromAsyncVariant);
             Helpers.Assert(fromAbiFlags.Has(MethodAbiFlags.HasAsyncContinuation));
             var fromAbi = MethodAbi.GetMethodAbi(Abi, args.From, fromAbiFlags);
-            var toAbi = MethodAbi.GetMethodAbi(Abi, args.To, GetMethodAbiFlags(args.To, args.ToVariant));
+            var toAbi = MethodAbi.GetMethodAbi(Abi, args.To, GetMethodAbiFlags(MethodAbiUsage.NormalEntry, args.To, args.ToVariant));
 
             // compute the main mapping and compatibility
             var toMap = new int[toAbi.Arguments.Length];

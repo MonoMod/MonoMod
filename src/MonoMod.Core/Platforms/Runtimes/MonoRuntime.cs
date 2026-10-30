@@ -234,9 +234,9 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        public MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default)
         {
-            // Mono never provides generic context through a hidden argument, and doesn't support runtimeasync
+            // Mono never provides generic context through an abi argument, and doesn't support runtimeasync
             return 0;
         }
 

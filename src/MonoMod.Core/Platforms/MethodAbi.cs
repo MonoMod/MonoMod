@@ -129,7 +129,7 @@ namespace MonoMod.Core.Platforms
         /// Gets the <see cref="MethodAbi"/> for <paramref name="method"/>, assuming <paramref name="abiFlags"/> are correct.
         /// </summary>
         /// <remarks>
-        /// <para><paramref name="abiFlags"/> is usually retrieved from <see cref="IRuntime.GetMethodAbiFlags(MethodBase, RuntimeMethodHandle)"/>.</para>
+        /// <para><paramref name="abiFlags"/> is usually retrieved from <see cref="IRuntime.GetMethodAbiFlags(MethodAbiUsage, MethodBase, RuntimeMethodHandle)"/>.</para>
         /// </remarks>
         /// <param name="abi">The <see cref="Abi"/> to use.</param>
         /// <param name="method">The method to get the ABi of.</param>

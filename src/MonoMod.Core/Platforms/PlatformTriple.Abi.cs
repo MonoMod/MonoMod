@@ -7,26 +7,6 @@ using System.Reflection;
 
 namespace MonoMod.Core.Platforms
 {
-    /// <summary>
-    /// Flags which are used to inform <see cref="PlatformTriple.GetMethodAbi(MethodBase, MethodAbiFlags)"/> of
-    /// information about the method which it cannot determine on its own from just the <see cref="MethodBase"/>.
-    /// </summary>
-    /// <remarks>
-    /// These flags are those determinable only by the <see cref="IRuntime"/> implementation for the current runtime.
-    /// </remarks>
-    [Flags]
-    public enum MethodAbiFlags
-    {
-        /// <summary>
-        /// The method requires a generic context parameter.
-        /// </summary>
-        HasGenericContext = 1 << 0,
-        /// <summary>
-        /// The method requires an async continuation parameter.
-        /// </summary>
-        HasAsyncContinuation = 1 << 1,
-    }
-
     public partial class PlatformTriple
     {
         /// <summary>
@@ -35,21 +15,25 @@ namespace MonoMod.Core.Platforms
         /// <remarks>
         /// <para><paramref name="handle"/> MUST be a valid handle corresponding to <paramref name="method"/>.</para>
         /// </remarks>
+        /// <param name="usage">The <see cref="MethodAbiUsage"/> indicating which method usage to consider.</param>
         /// <param name="method">The <see cref="MethodBase"/> of the method.</param>
         /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of the variant to use, if it is not the default.</param>
         /// <returns>The <see cref="MethodAbi"/> of that method variant.</returns>
-        public MethodAbi GetMethodAbi(MethodBase method, RuntimeMethodHandle handle = default)
-            => GetMethodAbi(method, Runtime.GetMethodAbiFlags(method, handle));
+        /// <seealso cref="IRuntime.GetMethodAbiFlags(MethodAbiUsage, MethodBase, RuntimeMethodHandle)"/>
+        /// <seealso cref="GetMethodAbi(MethodBase, MethodAbiFlags)"/>
+        public MethodAbi GetMethodAbi(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default)
+            => GetMethodAbi(method, Runtime.GetMethodAbiFlags(usage, method, handle));
 
         /// <summary>
         /// Gets the <see cref="MethodAbi"/> for <paramref name="method"/>, assuming <paramref name="abiFlags"/> are correct.
         /// </summary>
         /// <remarks>
-        /// <para><paramref name="abiFlags"/> is usually retrieved from <see cref="IRuntime.GetMethodAbiFlags(MethodBase, RuntimeMethodHandle)"/>.</para>
+        /// <para><paramref name="abiFlags"/> is usually retrieved from <see cref="IRuntime.GetMethodAbiFlags(MethodAbiUsage, MethodBase, RuntimeMethodHandle)"/>.</para>
         /// </remarks>
         /// <param name="method">The method to get the ABi of.</param>
         /// <param name="abiFlags">The <see cref="MethodAbiFlags"/> to assume.</param>
         /// <returns>The <see cref="MethodAbi"/> for <paramref name="method"/>.</returns>
+        /// <seealso cref="GetMethodAbi(MethodAbiUsage, MethodBase, RuntimeMethodHandle)"/>
         public MethodAbi GetMethodAbi(MethodBase method, MethodAbiFlags abiFlags)
             => MethodAbi.GetMethodAbi(Abi, GetIdentifiable(method), abiFlags);
 
@@ -74,8 +58,8 @@ namespace MonoMod.Core.Platforms
             src = GetIdentifiable(src);
             dst = GetIdentifiable(dst);
 
-            var srcAbi = GetMethodAbi(src);
-            var dstAbi = GetMethodAbi(dst);
+            var srcAbi = GetMethodAbi(MethodAbiUsage.RealMethodBody, src);
+            var dstAbi = GetMethodAbi(MethodAbiUsage.NormalEntry, dst);
 
             var argOrder = new int[dstAbi.Arguments.Length];
             var result = argumentMap.MapArguments(srcAbi, dstAbi, argOrder);

@@ -60,11 +60,18 @@ namespace MonoMod.Core.Platforms
         /// Gets the <see cref="MethodAbiFlags"/> for a given <see cref="MethodBase"/>, optionally specifying a specific
         /// variant via <paramref name="handle"/>.
         /// </summary>
+        /// <remarks>
+        /// <para>In an ideal world, <paramref name="handle"/> would be sufficient to uniquely identify the ABI we care about.
+        /// Unfortunately, we currently have many runtimes where we can't find "hidden" method handles, and so cannot in practice
+        /// identify certain things by them. We thus use <paramref name="usage"/> as a workaround so we can do this determination
+        /// based on our usage patterns alone.</para>
+        /// </remarks>
+        /// <param name="usage">The <see cref="MethodAbiUsage"/> indicating which method usage to consider.</param>
         /// <param name="method">The method to check.</param>
         /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of <paramref name="method"/> to check. This
         /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
         /// <returns>The <see cref="MethodAbiFlags"/> for the <paramref name="method"/> variant identified by <paramref name="handle"/>.</returns>
-        MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default);
+        MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default);
 
         /// <summary>
         /// Disables inlining for a particular method. After this is called, future invocations of this method will not be inlined at the callsite by the runtime.
