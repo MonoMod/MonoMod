@@ -166,6 +166,9 @@ namespace MonoMod.Core.Platforms.Runtimes
             return handle;
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "CreateDelegate() here will 100% always throw, but will (usually) compile the target method for us anyway." +
+                            "We don't care about the exception, and want the sideeffect.")]
         private RuntimeMethodHandle GetMethodHandleCore(MethodBase method)
         {
             // Compile the method handle before getting our hands on the final method handle.

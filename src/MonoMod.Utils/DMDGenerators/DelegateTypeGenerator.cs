@@ -398,6 +398,11 @@ namespace MonoMod.Utils.DMDGenerators
 
             // otherwise, we need to synthesize it
             DelegateTypeResult resultType;
+
+#pragma warning disable CA1031 // Do not catch general exception types
+            // If we support MethodBuilder, if it throws, we want to fall back to creating with Cecil.
+            // If Cecil succeeds, we're OK swallowing the exception. If it fails, it'll throw, and we'll
+            // have gotten an exception in the log anyway.
 #if NET9_0_OR_GREATER
             try
             {
@@ -411,6 +416,7 @@ namespace MonoMod.Utils.DMDGenerators
 #endif
                 resultType = CreateDelegateTypeWithCecil(key);
             }
+#pragma warning restore CA1031 // Do not catch general exception types
 
             return (resultType, false);
         }

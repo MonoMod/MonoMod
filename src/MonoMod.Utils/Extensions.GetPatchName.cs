@@ -1,6 +1,7 @@
 ﻿using Mono.Cecil;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace MonoMod.Utils
@@ -29,6 +30,7 @@ namespace MonoMod.Utils
             return (mr as ICustomAttributeProvider)?.GetPatchFullName(mr) ?? mr.FullName;
         }
 
+        [SuppressMessage("", "CA1307", Justification = "Most targets don't have the StringComparison overload, so we can't use it anyway.")]
         private static string GetPatchName(this ICustomAttributeProvider cap)
         {
             Helpers.ThrowIfArgumentNull(cap);

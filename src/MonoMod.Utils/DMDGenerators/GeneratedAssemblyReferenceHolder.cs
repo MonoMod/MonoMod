@@ -4,10 +4,10 @@ using System.Reflection;
 
 namespace MonoMod.Utils.DMDGenerators
 {
-    internal sealed class GeneratedAssemblyReferenceHolder
+    public sealed class GeneratedAssemblyReferenceHolder
     {
         private readonly List<object> references = new();
-        private readonly Dictionary<string, object> staticFieldSets = new();
+        private readonly Dictionary<string, object?> staticFieldSets = new();
 
         public int RecordedFieldSets => staticFieldSets.Count;
 
@@ -16,8 +16,9 @@ namespace MonoMod.Utils.DMDGenerators
             references.Add(obj);
         }
 
-        public void AddStaticField(string name, object obj)
+        public void AddStaticField(string name, object? obj)
         {
+            Helpers.ThrowIfArgumentNull(name);
             staticFieldSets.Add(name, obj);
         }
 
@@ -25,11 +26,13 @@ namespace MonoMod.Utils.DMDGenerators
 
         public void SetReferencesFieldName(string name)
         {
+            Helpers.ThrowIfArgumentNull(name);
             staticFieldSets.Add(name, references);
         }
 
         public void SetFields(Type owningType)
         {
+            Helpers.ThrowIfArgumentNull(owningType);
             foreach (var kvp in staticFieldSets)
             {
                 var fld = owningType.GetField(kvp.Key, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly);

@@ -43,8 +43,5 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>MonoMod.Utils.Cil.ILGeneratorProxy</_Parameter1>
     </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>MonoMod.UnitTest</_Parameter1>
-    </AssemblyAttribute>
   </ItemGroup>
 </Project>

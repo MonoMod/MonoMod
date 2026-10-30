@@ -315,6 +315,8 @@ namespace MonoMod.Utils
             }
 
             MethodInfo? result;
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
+            // In some configurations, we never read e.g. didTryMb because it's not supported.
             bool didTryCecil = false, didTryMb = false, didTryDm = false;
 
             if (_PreferCecil)
@@ -364,6 +366,7 @@ namespace MonoMod.Utils
                 return result;
             }
 #endif
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
 
             // if neither of the above worked, the cecil one MUST work
             return DMDCecilGenerator.Generate(this, context);

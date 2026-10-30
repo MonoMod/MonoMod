@@ -57,7 +57,7 @@ namespace MonoMod.Utils
                 ?? throw new InvalidOperationException("Could not find generated method");
         }
 
-        internal static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder, out GeneratedAssemblyReferenceHolder refHolder)
+        public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder, out GeneratedAssemblyReferenceHolder refHolder)
         {
             Helpers.ThrowIfArgumentNull(dmd);
             var orig = dmd.OriginalMethod;

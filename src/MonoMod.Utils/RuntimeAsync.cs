@@ -330,6 +330,7 @@ namespace MonoMod.Utils
         /// return type; <see langword="false"/> if it is not.</returns>
         public static bool IsSupportedReturnType(Type type)
         {
+            Helpers.ThrowIfArgumentNull(type);
             var holder = GetHolder();
             if (type.IsGenericType)
             {

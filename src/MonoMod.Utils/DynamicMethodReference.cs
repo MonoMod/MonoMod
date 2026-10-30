@@ -8,7 +8,7 @@ namespace MonoMod.Utils
         public MethodInfo DynamicMethod { get; }
 
         public DynamicMethodReference(ModuleDefinition module, MethodInfo dm)
-            : base("", Helpers.ThrowIfNull(module).ImportReference(dm.ReturnType))
+            : base("", Helpers.ThrowIfNull(module).ImportReference(Helpers.ThrowIfNull(dm).ReturnType))
         {
             DynamicMethod = dm;
             foreach (var param in dm.GetParameters())

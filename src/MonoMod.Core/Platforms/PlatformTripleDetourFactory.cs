@@ -509,6 +509,8 @@ namespace MonoMod.Core.Platforms
                 Interlocked.Exchange(ref dstPin, null)?.Dispose();
             }
 
+            [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+                Justification = "We don't want to bubble exceptions out of here, since we're running cooperatively with other handlers")]
             public override void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, nint codeStart, nint codeRw, ulong codeSize)
             {
                 if (!IsApplied)
@@ -721,6 +723,8 @@ namespace MonoMod.Core.Platforms
                 keepAlives.Clear();
             }
 
+            [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+                Justification = "We don't want to bubble exceptions out of here, since we're running cooperatively with other handlers")]
             public override unsafe void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, IntPtr codeStart, IntPtr codeRw, ulong codeSize)
             {
                 if (!IsApplied)
