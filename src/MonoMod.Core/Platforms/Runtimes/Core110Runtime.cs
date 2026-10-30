@@ -140,12 +140,12 @@ namespace MonoMod.Core.Platforms.Runtimes
             runtimeAsyncInfo = new()
             {
                 // if the normal variant reports IsAsyncThunkMethod(), then it really is a thunk that calls into the async variant
-                NormalVariantFlags = ordinary->IsAsyncThunkMethod() ? RuntimeAsyncVariantFlags.IsThunk : 0,
+                NormalVariantFlags = ordinary != null && ordinary->IsAsyncThunkMethod() ? RuntimeAsyncVariantFlags.IsThunk : 0,
                 NormalVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)ordinary),
 
                 // if the async variant reports IsAsyngThunkMethod(), it's not *really* a thunk because it is compiled by the jit
                 // using the same IL as the ordinary variant. This is marked by SupportsAsyncVersionCodegen().
-                AsyncVariantFlags = async->IsAsyncThunkMethod() && !async->SupportsAsyncVersionCodegen() ? RuntimeAsyncVariantFlags.IsThunk : 0,
+                AsyncVariantFlags = async != null && async->IsAsyncThunkMethod() && !async->SupportsAsyncVersionCodegen() ? RuntimeAsyncVariantFlags.IsThunk : 0,
                 AsyncVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)async),
             };
 

@@ -107,11 +107,12 @@ namespace MonoMod.Utils.DMDGenerators
 
                     var bitOffs = curParamFlagsOffs;
                     curParamFlagsOffs += NumParamFlags;
-                    if (curParamFlagsOffs >= 32)
+                    if (curParamFlagsOffs > 32)
                     {
                         paramFlags.Add(curParamFlags);
                         curParamFlags = 0;
-                        curParamFlagsOffs = 0;
+                        bitOffs = 0;
+                        curParamFlagsOffs = NumParamFlags;
                     }
                     curParamFlags |= (uint)pFlags << bitOffs;
                 }

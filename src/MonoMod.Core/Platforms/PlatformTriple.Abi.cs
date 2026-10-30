@@ -104,6 +104,12 @@ namespace MonoMod.Core.Platforms
                 il.Emit(OpCodes.Ldarg, argOrder[dstAbi.ReturnBufferArgument]);
             }
 
+            // if dst takes a this argument, load it before the user arguments
+            if (dstAbi.ThisArgument >= 0)
+            {
+                il.Emit(OpCodes.Ldarg, argOrder[dstAbi.ThisArgument]);
+            }
+
             // then load all of the user arguments in-order
             for (var i = 0; i < argOrder.Length; i++)
             {

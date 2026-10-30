@@ -333,7 +333,7 @@ namespace MonoMod.Core.Platforms
                 }
 
                 // record the source argument index to the output
-                if (mapping.Length >= i)
+                if (mapping.Length > i)
                 {
                     mapping[i] = srcArgIdx;
                 }
