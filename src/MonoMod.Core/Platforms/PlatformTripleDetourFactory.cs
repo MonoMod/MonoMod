@@ -350,7 +350,7 @@ namespace MonoMod.Core.Platforms
             var source = triple.GetIdentifiable(request.Source);
             var target = triple.GetIdentifiable(request.Target);
 
-            ICoreDetour detour;
+            ManagedCoreDetour detour;
             if (triple.SupportedFeatures.Has(RuntimeFeature.HasRuntimeAsync)
                 // runtime supports runtime async, we need to check for that so we can do the right thing in that case
                 && triple.Runtime.TryGetRuntimeAsyncInfo(source, out var srcAsyncInfo)
@@ -377,6 +377,7 @@ namespace MonoMod.Core.Platforms
 
                 detour = CreateAsyncDetour(
                     source, srcAsyncInfo,
+                    target,
                     ordinaryDst,
                     asyncDst, tgtAsyncInfo);
             }
@@ -424,16 +425,20 @@ namespace MonoMod.Core.Platforms
 
         }
 
+        private void DisableInlining(MethodBase method, RuntimeMethodHandle handle)
+        {
+            if (!triple.TryDisableInlining(method, handle))
+            {
+                MMDbgLog.Warning($"Could not disable inlining for detoured method {method}");
+            }
+        }
+
         private ManagedCoreDetour CreateOrdinaryDetour(MethodBase src, MethodBase dst)
         {
-            var argumentMap = GetArgumentMap(src, dst);
             var srcHandle = triple.Runtime.GetMethodHandle(src);
+            DisableInlining(src, srcHandle);
 
-            if (!triple.TryDisableInlining(src, srcHandle))
-            {
-                MMDbgLog.Warning($"Could not disable inlining for detoured method {src}");
-            }
-
+            var argumentMap = GetArgumentMap(src, dst);
             var realAbiTarget = triple.GetRealDetourTarget(src, dst, argumentMap);
             var targetHandle = triple.Runtime.GetMethodHandle(realAbiTarget);
 
@@ -557,19 +562,195 @@ namespace MonoMod.Core.Platforms
             return dmd.Generate();
         }
 
-        /// <param name="ordinaryDst">The <see cref="MethodBase"/> for the method used for the ordinary method of <paramref name="src"/> (when that's needed)</param>
-        /// <param name="dst">The <see cref="MethodBase"/> for the method used for the async method, with its RuntimeAsync info in <paramref name="dstAsyncInfo"/></param>
+        /// <param name="normalDst">The <see cref="MethodBase"/> for the method used for the ordinary method of <paramref name="src"/> (when that's needed)</param>
+        /// <param name="asyncDst">The <see cref="MethodBase"/> for the method used for the async method, with its RuntimeAsync info in <paramref name="dstAsyncInfo"/></param>
         /// <remarks>
-        /// If <paramref name="ordinaryDst"/> == <paramref name="dst"/>, the ordinary detour should detor to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.NormalVariant"/>.
-        /// If they are different, then resolve <paramref name="ordinaryDst"/>'s method handle normally and use that.
+        /// If <paramref name="normalDst"/> == <paramref name="asyncDst"/>, the ordinary detour should detor to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.NormalVariant"/>.
+        /// If they are different, then resolve <paramref name="normalDst"/>'s method handle normally and use that.
         /// The async variant of <paramref name="srcAsyncInfo"/> is always detoured to <paramref name="dstAsyncInfo"/>.<see cref="RuntimeAsyncMethodInfo.AsyncVariant"/>.
         /// </remarks>
-        private ICoreDetour CreateAsyncDetour(
+        private ManagedCoreDetour CreateAsyncDetour(
             MethodBase src, RuntimeAsyncMethodInfo srcAsyncInfo,
-            MethodBase ordinaryDst,
-            MethodBase dst, RuntimeAsyncMethodInfo dstAsyncInfo)
+            MethodBase logicalDst, MethodBase normalDst,
+            MethodBase asyncDst, RuntimeAsyncMethodInfo dstAsyncInfo)
         {
-            throw new NotImplementedException();
+            DisableInlining(src, srcAsyncInfo.NormalVariant);
+            DisableInlining(src, srcAsyncInfo.AsyncVariant);
+
+            //var normalDstHandle = normalDst == asyncDst ? dstAsyncInfo.NormalVariant : triple.Runtime.GetMethodHandle(normalDst);
+            var asyncDstHandle = dstAsyncInfo.AsyncVariant;
+
+            var normalArgMap = GetArgumentMap(src, normalDst);
+            var asyncArgMap = normalDst == asyncDst ? normalArgMap : GetArgumentMap(src, asyncDst);
+
+            // build the normal real target
+            var realNormalTarget = triple.GetRealDetourTarget(src, normalDst, normalArgMap);
+            var realNormalTargetHandle = triple.Runtime.GetMethodHandle(realNormalTarget);
+
+            var detourBox = new AsyncManagedDetourBox(this,
+                src, srcAsyncInfo,
+                logicalDst,
+                realNormalTarget, realNormalTargetHandle,
+                asyncDst, asyncDstHandle,
+                asyncArgMap);
+
+            return new ManagedCoreDetour(detourBox);
+        }
+
+        private sealed class AsyncManagedDetourBox : ManagedDetourBoxBase
+        {
+            public readonly RuntimeAsyncMethodInfo SrcAsyncInfo;
+            public readonly MethodBase NormalRealDst;
+            public readonly RuntimeMethodHandle NormalRealDstHandle;
+            public readonly MethodBase AsyncDst;
+            public readonly RuntimeMethodHandle AsyncDstHandle;
+            public readonly AbiArgumentMap AsyncArgumentMap;
+
+            public AsyncManagedDetourBox(
+                PlatformTripleDetourFactory factory,
+                MethodBase src, RuntimeAsyncMethodInfo srcAsyncInfo,
+                MethodBase logicalDst,
+                MethodBase normalRealDst, RuntimeMethodHandle normalRealDstHandle,
+                MethodBase asyncDst, RuntimeMethodHandle asyncDstHandle,
+                AbiArgumentMap asyncArgMap)
+                : base(factory, src, logicalDst)
+            {
+                SrcAsyncInfo = srcAsyncInfo;
+                NormalRealDst = normalRealDst;
+                NormalRealDstHandle = normalRealDstHandle;
+                AsyncDst = asyncDst;
+                AsyncDstHandle = asyncDstHandle;
+                AsyncArgumentMap = asyncArgMap;
+            }
+
+            private unsafe (MethodInfo AsyncDst, RuntimeMethodHandle AsyncDstHandle) BuildNewAsyncVariantTarget(out IntPtr* realTargetSlot)
+            {
+                // we need to rebuild this each time the async variant is recompiled, since the JIT makes no attempt
+                // to make new codeversions compatible with old continuation, and instead relies on OSR to make that work.
+                Helpers.Assert(Triple.System.MemoryAllocator.TryAllocate(new(IntPtr.Size), out var targetSlot));
+                realTargetSlot = (IntPtr*)targetSlot.BaseAddress;
+                var (realAsyncDst, realAsyncDstHandle) = Triple.Runtime.GetAsyncVariantRealDetourTarget(new(
+                    SrcMethod, SrcAsyncInfo.AsyncVariant,
+                    AsyncDst, AsyncDstHandle,
+                    targetSlot.BaseAddress),
+                    AsyncArgumentMap, out var asyncTargetHandle);
+
+                AllocHandles.Add(targetSlot);
+                if (asyncTargetHandle is not null)
+                {
+                    AllocHandles.Add(asyncTargetHandle);
+                }
+
+                var targetPin = Triple.PinMethodIfNeeded(realAsyncDst);
+                if (targetPin is not null)
+                {
+                    AllocHandles.Add(targetPin);
+                }
+
+                return (realAsyncDst, realAsyncDstHandle);
+            }
+
+            protected override unsafe void ApplyCore()
+            {
+                MMDbgLog.Trace($"Applying detour from {SrcMethod} to {DstMethod}");
+
+                // need to detour the normal variant
+                Triple.Compile(SrcMethod, SrcAsyncInfo.NormalVariant);
+                var normalFrom = Triple.GetNativeMethodBody(SrcMethod, SrcAsyncInfo.NormalVariant);
+
+                Triple.Compile(NormalRealDst, NormalRealDstHandle);
+                var normalTo = NormalRealDstHandle.GetFunctionPointer();
+
+                var srcPin = Triple.PinMethodIfNeeded(SrcMethod);
+                var dstPin = Triple.PinMethodIfNeeded(NormalRealDst);
+                if (srcPin is not null)
+                {
+                    AllocHandles.Add(srcPin);
+                }
+                if (dstPin is not null)
+                {
+                    AllocHandles.Add(dstPin);
+                }
+
+                Detours.Add(Triple.CreateSimpleDetour(normalFrom, normalTo));
+
+                // then we *also* need to generate and detour the async variant
+                var (realTarget, realHandle) = BuildNewAsyncVariantTarget(out var realTargetSlot);
+                Triple.Compile(SrcMethod, SrcAsyncInfo.AsyncVariant);
+                var asyncFrom = Triple.GetNativeMethodBody(SrcMethod, SrcAsyncInfo.AsyncVariant);
+
+                Triple.Compile(realTarget, realHandle);
+                var asyncTo = realHandle.GetFunctionPointer();
+
+                var newDetour = Triple.CreateNativeDetour(asyncFrom, asyncTo, ref *realTargetSlot);
+                if (newDetour.AltHandle is not null)
+                {
+                    AllocHandles.Add(newDetour.AltHandle);
+                }
+                Detours.Add(newDetour.Simple);
+            }
+
+            public override unsafe void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, IntPtr codeStart, IntPtr codeRw, ulong codeSize)
+            {
+                if (!IsApplied)
+                {
+                    return;
+                }
+
+                method = Triple.GetIdentifiable(method);
+
+                if (method != SrcMethod)
+                {
+                    return;
+                }
+
+                lock (Sync)
+                {
+                    if (!IsApplied)
+                    {
+                        return;
+                    }
+                    if (IsApplying)
+                    {
+                        return;
+                    }
+
+                    IsApplying = true;
+
+                    try
+                    {
+                        if (handle == SrcAsyncInfo.NormalVariant)
+                        {
+                            // recompiling the normal variant
+                            var to = NormalRealDstHandle.GetFunctionPointer();
+                            var newDetour = Triple.CreateSimpleDetour(codeStart, to, detourMaxSize: (int)codeSize, fromRw: codeRw);
+                            Detours.Add(newDetour);
+                        }
+                        else if (handle == SrcAsyncInfo.AsyncVariant)
+                        {
+                            // recompiling the async variant
+                            // we need to generate a NEW real target to detour to, since runtime async continuations are not code-version compatible by default
+                            var (realTarget, realHandle) = BuildNewAsyncVariantTarget(out var realTargetSlot);
+                            MMDbgLog.Trace($"Updating async variant of {SrcMethod} detour to {realTarget}:{realHandle.Value:x}");
+                            var to = realHandle.GetFunctionPointer();
+                            var newDetour = Triple.CreateNativeDetour(codeStart, to, ref *realTargetSlot, detourMaxSize: (int)codeSize, fromRw: codeRw);
+                            if (newDetour.AltHandle is not null)
+                            {
+                                AllocHandles.Add(newDetour.AltHandle);
+                            }
+                            Detours.Add(newDetour.Simple);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        MMDbgLog.Error($"An exception occurred while updating the detour from {SrcMethod} to {DstMethod}: {e}");
+                    }
+                    finally
+                    {
+                        IsApplying = false;
+                    }
+                }
+            }
         }
 
         private sealed class NativeDetourBox : DetourBoxBase

@@ -185,6 +185,6 @@ namespace MonoMod.Core.Platforms
     /// invokes <paramref name="FromAsyncVariant"/> (and not a clone).</param>
     public readonly record struct GetAsyncVariantRealDetourTargetArgs(
         MethodBase From, RuntimeMethodHandle FromAsyncVariant,
-        MethodInfo To, RuntimeMethodHandle ToVariant,
+        MethodBase To, RuntimeMethodHandle ToVariant,
         IntPtr FromOrigEntrypointSlot);
 }
