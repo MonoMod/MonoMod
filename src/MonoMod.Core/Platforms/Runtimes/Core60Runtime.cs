@@ -480,5 +480,29 @@ namespace MonoMod.Core.Platforms.Runtimes
             return ptr;
         }
 #endif
+
+        protected override unsafe bool TryGetNonStubMethodHandle(RuntimeMethodHandle handle, out RuntimeMethodHandle outHandle)
+        {
+            // ensure we don't accidentally try to use this on a runtime it's not meant for
+            if (GetType() != typeof(Core60Runtime))
+            {
+                return base.TryGetNonStubMethodHandle(handle, out outHandle);
+            }
+
+            var md = (V60.MethodDesc*)handle.Value;
+
+            if (md->IsUnboxingStub)
+            {
+                md = V60.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+                outHandle = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)md);
+                return true;
+            }
+            else
+            {
+                // not an unboxing stub, we still return true so we don't need to do extra logic
+                outHandle = handle;
+                return true;
+            }
+        }
     }
 }

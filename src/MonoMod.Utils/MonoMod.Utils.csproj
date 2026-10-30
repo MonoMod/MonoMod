@@ -24,10 +24,27 @@
     <AdditionalFiles Include="Cil\ILOpcodes.txt" />
   </ItemGroup>
 
+  <Choose>
+    <When Condition="'$([MSBuild]::GetTargetFrameworkIdentifier($(TargetFramework)))' == '.NETFramework'">
+      <PropertyGroup>
+        <DefineConstants>$(DefineConstants);METHODBUILDER_SUPPORTED</DefineConstants>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$([MSBuild]::GetTargetFrameworkIdentifier($(TargetFramework)))' == '.NETCoreApp'
+          and $([MSBuild]::VersionGreaterThanOrEquals($([MSBuild]::GetTargetFrameworkVersion($(TargetFramework))),'9.0'))">
+      <PropertyGroup>
+        <DefineConstants>$(DefineConstants);METHODBUILDER_SUPPORTED</DefineConstants>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  
   <!-- Needed for .NET Framework RUNTIME OLDER THAN 4.6 -->
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>MonoMod.Utils.Cil.ILGeneratorProxy</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>MonoMod.UnitTest</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 </Project>

@@ -321,13 +321,13 @@ namespace MonoMod.UnitTest
                 var il4 = dmd4.GetILGenerator();
                 il4.Emit(System.Reflection.Emit.OpCodes.Ret);
 
-                var methodBuilder = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd, typeBuilder);
+                var methodBuilder = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd, typeBuilder, out _);
                 Assert.NotNull(methodBuilder);
-                var methodBuilder2 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd2, typeBuilder);
+                var methodBuilder2 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd2, typeBuilder, out _);
                 Assert.NotNull(methodBuilder2);
-                var methodBuilder3 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
+                var methodBuilder3 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder, out _);
                 Assert.NotNull(methodBuilder3);
-                var methodBuilder4 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
+                var methodBuilder4 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder, out _);
                 Assert.NotNull(methodBuilder4);
 
                 var generatedType = typeBuilder.CreateType();

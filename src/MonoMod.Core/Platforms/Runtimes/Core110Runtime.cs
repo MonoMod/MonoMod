@@ -1,15 +1,289 @@
+using MonoMod.Core.Utils;
+using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes
 {
     [SuppressMessage("Performance", "CA1852", Justification = "This type will be derived for .NET 12.")]
-    internal class Core110Runtime : Core100Runtime
+    internal class Core110Runtime : Core100Runtime, IInitialize<PlatformTriple>
     {
-        public Core110Runtime(ISystem system, IArchitecture arch) : base(system, arch) { }
+        private PlatformTriple platformTriple = null!;
+        protected PlatformTriple PlatformTriple => platformTriple;
+
+        void IInitialize<PlatformTriple>.Initialize(PlatformTriple value) => platformTriple = value;
+
+        public Core110Runtime(ISystem system, IArchitecture arch) : base(system, arch)
+        {
+            if (AbiCore is { } abi)
+            {
+                var argOrder = abi.ArgumentOrder;
+
+                var newArgOrder = new SpecialArgumentKind[argOrder.Length + 1];
+                argOrder.Span.CopyTo(newArgOrder);
+
+                var insertIndex = Array.IndexOf(newArgOrder, SpecialArgumentKind.GenericContext);
+                Helpers.Assert(insertIndex >= 0);
+                if (PlatformDetection.Architecture is not ArchitectureKind.x86)
+                {
+                    // on everything BUT x86, continuation is AFTER generic context, not before
+                    insertIndex++;
+                }
+
+                Array.Copy(newArgOrder, insertIndex, newArgOrder, insertIndex + 1, argOrder.Length - insertIndex);
+                newArgOrder[insertIndex] = SpecialArgumentKind.AsyncContinuation;
+
+                AbiCore = abi with
+                {
+                    ArgumentOrder = newArgOrder,
+                };
+            }
+        }
+
+        public override RuntimeFeature Features
+            => (base.Features & ~RuntimeFeature.RequiresBodyThunkWalking)
+            | RuntimeFeature.HasRuntimeAsync;
+
+        private unsafe IntPtr GetMethodBodyPtr(MethodBase method, RuntimeMethodHandle handle)
+        {
+            var md = (V110.MethodDesc*)handle.Value;
+
+            md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+
+            var ptr = (nint)md->GetNativeCode();
+
+            return ptr;
+        }
+
+        public override unsafe IntPtr GetMethodEntryPoint(MethodBase method, RuntimeMethodHandle handle = default)
+        {
+            method = GetIdentifiable(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
+            var didPrepare = false;
+            GetPtr:
+            // we want to invoke _CompileMethod, not _PrepareMethod because _CompileMethod calls directly into DoPrestub, while _PrepareMethod
+            // seems to skip prestub-intercepted remoting methods
+            Helpers.Assert(TryInvokeBclCompileMethod(handle));
+            // get then throw away the function pointer to try to ensure that the pointer is restored
+            _ = handle.GetFunctionPointer();
+            var ptr = GetMethodBodyPtr(method, handle);
+
+            if (ptr == IntPtr.Zero)
+            { // the method hasn't been JITted yet
+                if (!didPrepare)
+                {
+                    Helpers.Assert(TryInvokeBclCompileMethod(handle));
+                    didPrepare = true;
+                    goto GetPtr;
+                }
+                else
+                {
+                    // we've already run a prepare, lets try another approach
+                    ptr = handle.GetFunctionPointer();
+
+                    throw new InvalidOperationException($"Could not get entry point normally, GetFunctionPointer() = {ptr:x16}");
+                }
+            }
+
+            return ptr;
+        }
+
+        protected override unsafe bool TryGetNonStubMethodHandle(RuntimeMethodHandle handle, out RuntimeMethodHandle outHandle)
+        {
+            // ensure we don't accidentally try to use this on a runtime it's not meant for
+            if (GetType() != typeof(Core110Runtime))
+            {
+                return base.TryGetNonStubMethodHandle(handle, out outHandle);
+            }
+
+            var md = (V110.MethodDesc*)handle.Value;
+
+            if (md->IsUnboxingStub())
+            {
+                md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+                outHandle = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)md);
+                return true;
+            }
+            else
+            {
+                // not an unboxing stub, we still return true so we don't need to do extra logic
+                outHandle = handle;
+                return true;
+            }
+        }
+
+        public override unsafe bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
+        {
+            var handle = GetMethodHandle(method);
+            var mdesc = (V110.MethodDesc*)handle.Value;
+
+            if (!mdesc->HasAsyncMethodData())
+            {
+                // no async method data, nothing special to report
+                runtimeAsyncInfo = default;
+                return false;
+            }
+
+            var ordinary = mdesc->GetOrdinaryVariantNoCreate();
+            var async = mdesc->GetAsyncVariantNoCreate();
+
+            runtimeAsyncInfo = new()
+            {
+                // if the normal variant reports IsAsyncThunkMethod(), then it really is a thunk that calls into the async variant
+                NormalVariantFlags = ordinary->IsAsyncThunkMethod() ? RuntimeAsyncVariantFlags.IsThunk : 0,
+                NormalVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)ordinary),
+
+                // if the async variant reports IsAsyngThunkMethod(), it's not *really* a thunk because it is compiled by the jit
+                // using the same IL as the ordinary variant. This is marked by SupportsAsyncVersionCodegen().
+                AsyncVariantFlags = async->IsAsyncThunkMethod() && !async->SupportsAsyncVersionCodegen() ? RuntimeAsyncVariantFlags.IsThunk : 0,
+                AsyncVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)async),
+            };
+
+            GC.KeepAlive(method);
+            return true;
+        }
+
+        public override unsafe MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        {
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
+            var md = (V110.MethodDesc*)handle.Value;
+
+            MethodAbiFlags result = 0;
+
+            if (md->IsAsyncVariantMethod())
+            {
+                result |= MethodAbiFlags.HasAsyncContinuation;
+            }
+
+            // TODO: implement generic sharing checks in terms of the MethodDesc stuff
+            if (MethodRequiresGenericContext(method, handle))
+            {
+                result |= MethodAbiFlags.HasGenericContext;
+            }
+
+            return result;
+        }
+
+        public override (MethodInfo Method, RuntimeMethodHandle Variant) GetAsyncVariantRealDetourTarget(
+            GetAsyncVariantRealDetourTargetArgs args,
+            AbiArgumentMap argumentMap,
+            out IDisposable? handle)
+        {
+            handle = null;
+
+            var fromAbiFlags = GetMethodAbiFlags(args.From, args.FromAsyncVariant);
+            Helpers.Assert(fromAbiFlags.Has(MethodAbiFlags.HasAsyncContinuation));
+            var fromAbi = MethodAbi.GetMethodAbi(Abi, args.From, fromAbiFlags);
+            var toAbi = MethodAbi.GetMethodAbi(Abi, args.To, GetMethodAbiFlags(args.To, args.ToVariant));
+
+            // compute the main mapping and compatibility
+            var toMap = new int[toAbi.Arguments.Length];
+            var mapResult = argumentMap.MapArguments(fromAbi, toAbi, toMap);
+            mapResult.ThrowIfInvalid();
+            // TODO: warn for uunmapped source args..?
+
+            Helpers.Assert(fromAbi.AsyncContinuationArgument >= 0);
+
+            // we know that we have something compatible now, now to do more work...
+            var toTarget = GetMethodStableEntrypoint(args.To, args.ToVariant);
+
+            // We have now collected sufficient information to emit a helper.
+            var fromAbiArgs = fromAbi.Arguments.Span;
+            var toAbiArgs = toAbi.Arguments.Span;
+
+            var fromArgTypes = fromAbiArgs.ToArray().Select(a => a.Type).ToArray();
+            var toArgTypes = toAbiArgs.ToArray().Select(a => a.Type).ToArray();
+
+            using var dmd = new DynamicMethodDefinition(
+                DebugFormatter.Format($"MM:AsyncProxy[{args.From} -> {args.To}]"),
+                fromAbi.AbiReturn,
+                fromArgTypes);
+            // This DMD must NOT be async since we want to access the continuation (and that is the primary reason for this method).
+
+            var il = dmd.GetILGenerator();
+
+            // We need to check the continuation argument, since if that's non-null, this is a resume OF THE ORIGINAL
+            // ASYNC METHOD, which we MUST pass back to the original since we can't make sense of it ourselves.
+            var noContinuationLbl = il.DefineLabel();
+            il.Emit(OpCodes.Ldarg, fromAbi.AsyncContinuationArgument);
+            il.Emit(OpCodes.Brfalse, noContinuationLbl);
+
+            // We have a continuation, and need to just emit a direct calli to the original.
+            for (var i = 0; i < fromAbiArgs.Length; i++)
+            {
+                il.Emit(OpCodes.Ldarg, i);
+            }
+
+            // args are on stack, now we need to load our target
+            if (IntPtr.Size == 4)
+            {
+                il.Emit(OpCodes.Ldc_I4, (int)(uint)args.FromOrigEntrypointSlot);
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldc_I8, (long)(ulong)args.FromOrigEntrypointSlot);
+            }
+            // the pointer we're given is an indirection slot
+            il.Emit(OpCodes.Ldind_I);
+
+            il.Emit(OpCodes.Tailcall); // we're emitting the tailcall sequence
+            il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, fromAbi.AbiReturn, fromArgTypes, null);
+            il.Emit(OpCodes.Ret);
+
+            il.MarkLabel(noContinuationLbl);
+
+            // We have NO continuation, we need to invoke the target method.
+            // Since we need to invoke a specific variant, we *also* do that through a pointer, though this one
+            // we directly embed the stable entrypoint of.
+            for (var i = 0; i < toAbiArgs.Length; i++)
+            {
+                var fromArg = toMap[i];
+                il.Emit(OpCodes.Ldarg, fromArg);
+            }
+
+            if (IntPtr.Size == 4)
+            {
+                il.Emit(OpCodes.Ldc_I4, (int)(uint)toTarget);
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldc_I8, (long)(ulong)toTarget);
+            }
+
+            il.Emit(OpCodes.Tailcall);
+            il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, toAbi.AbiReturn, toArgTypes, null);
+            il.Emit(OpCodes.Ret);
+
+            // our ABI fixup is done. 
+            var resultMethod = dmd.Generate();
+            // Since we're generating an ordinary method with the ABI layout, we want to use the ordinary
+            // method handle.
+            return (resultMethod, GetMethodHandle(resultMethod));
+        }
+
+        protected virtual unsafe nuint GetMethodStableEntrypoint(MethodBase method, RuntimeMethodHandle handle)
+        {
+            // We MUST have To compiled, since we need to access its stable entrypoint
+            // so we can call it properly (since we cannot, in general, just use ldftn,
+            // especially not to call arbitrary variants).
+            Compile(method, handle);
+            var toMd = (V110.MethodDesc*)handle.Value;
+            return toMd->GetStableEntryPoint();
+        }
 
         // src/coreclr/inc/jiteeversionguid.h
         // 0d18a7df-af1f-4481-a72f-aa6cf8aa0a65
@@ -80,9 +354,13 @@ namespace MonoMod.Core.Platforms.Runtimes
                 {
                     ref var chunk = ref args->chunks[i];
                     if ((chunk.flags & V110.CorJitAllocMemFlag.HotCode) != 0)
+                    {
                         (*wrap)[ICorJitInfoWrapper.HotCodeRW] = chunk.blockRW;
+                    }
                     else if ((chunk.flags & V110.CorJitAllocMemFlag.ColdCode) != 0)
+                    {
                         (*wrap)[ICorJitInfoWrapper.ColdCodeRW] = chunk.blockRW;
+                    }
                 }
             }
         }

@@ -1,4 +1,6 @@
 ﻿using Mono.Cecil;
+using MonoMod.Logs;
+using MonoMod.Utils.DMDGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,9 +14,12 @@ namespace MonoMod.Utils
     /// </summary>
     public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator>
     {
+        protected override bool SupportsAsyncMethods => true;
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
         {
+            var refsHolder = new GeneratedAssemblyReferenceHolder();
+
             var def = dmd.Definition ?? throw new InvalidOperationException();
             var typeDef = context as TypeDefinition;
 
@@ -93,6 +98,22 @@ namespace MonoMod.Utils
                     NoInlining = true
                 };
 
+                if (dmd.Definition.ImplAttributes.Has(Mono.Cecil.MethodImplAttributes.NoInlining))
+                {
+                    clone.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining;
+                }
+
+                // AggressiveOptimization
+                if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)512))
+                {
+                    clone.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)512;
+                }
+
+                if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl))
+                {
+                    clone.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
+
                 foreach (var param in def.Parameters)
                     clone.Parameters.Add(param.Clone().Relink(relinker, clone));
 
@@ -144,7 +165,26 @@ namespace MonoMod.Utils
 
                     if (operand is DynamicMethodReference dmref)
                     {
-                        // TODO: Fix up DynamicMethod inline refs.
+                        if (instr.OpCode != Mono.Cecil.Cil.OpCodes.Call)
+                        {
+                            throw new InvalidOperationException(DebugFormatter.Format($"Invalid opcode {instr.OpCode} given dynamic method operand {dmref}"));
+                        }
+
+                        var dm = dmref.DynamicMethod;
+
+                        // we need to convert to a delegate, store that in a static field, and load the field before calling the invoker
+                        var (delTy, invoker) = DelegateTypeGenerator.GetDelegateType(MethodSignature.ForMethod(dm));
+
+                        var field = new FieldDefinition($"f{typeDef.Fields.Count}", Mono.Cecil.FieldAttributes.Static, module.ImportReference(delTy));
+                        typeDef.Fields.Add(field);
+
+                        var del = dm.CreateDelegate(delTy);
+                        refsHolder.AddStaticField(field.Name, del);
+
+                        body.Instructions.Insert(instri, Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Ldsfld, field));
+                        instri++;
+
+                        operand = module.ImportReference(invoker);
                     }
 
                     if (accessChecksIgnored != null && operand is MemberReference mref)
@@ -169,10 +209,10 @@ namespace MonoMod.Utils
 
                 if (def.HasThis)
                 {
-                    TypeReference type = def.DeclaringType;
-                    if (type.IsValueType)
-                        type = new ByReferenceType(type);
-                    clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, type.Relink(relinker, clone)));
+                    TypeReference declType = def.DeclaringType;
+                    if (declType.IsValueType)
+                        declType = new ByReferenceType(declType);
+                    clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, declType.Relink(relinker, clone)));
                 }
 
                 var envDmdDump = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
@@ -190,9 +230,22 @@ namespace MonoMod.Utils
                         module.Write(fileStream);
                 }
 
+                if (refsHolder.NeedsReferencesField)
+                {
+                    var field = new FieldDefinition("references", Mono.Cecil.FieldAttributes.Static, module.TypeSystem.Object);
+                    typeDef.Fields.Add(field);
+                    refsHolder.SetReferencesFieldName(field.Name);
+                }
+
+                // TODO: load these in unloadable ALCs when possible?
                 var asm = ReflectionHelper.Load(module);
 
-                return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)!
+                var type = asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false);
+                Helpers.Assert(type is not null);
+
+                refsHolder.SetFields(type);
+
+                return type
                     .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
                     ?? throw new InvalidOperationException("Could not find generated method");
 

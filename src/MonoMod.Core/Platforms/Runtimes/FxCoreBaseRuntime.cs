@@ -11,7 +11,6 @@ namespace MonoMod.Core.Platforms.Runtimes
 {
     internal abstract class FxCoreBaseRuntime : IRuntime
     {
-
         public abstract RuntimeKind Target { get; }
 
         public virtual RuntimeFeature Features =>
@@ -157,6 +156,18 @@ namespace MonoMod.Core.Platforms.Runtimes
             "We don't want those exceptions propagating higher up the stack though.")]
         public virtual RuntimeMethodHandle GetMethodHandle(MethodBase method)
         {
+            var handle = GetMethodHandleCore(method);
+
+            if (TryGetNonStubMethodHandle(handle, out var nonStub))
+            {
+                return nonStub;
+            }
+
+            return handle;
+        }
+
+        private RuntimeMethodHandle GetMethodHandleCore(MethodBase method)
+        {
             // Compile the method handle before getting our hands on the final method handle.
             if (method is DynamicMethod dm)
             {
@@ -187,7 +198,13 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public bool RequiresGenericContext(MethodBase method)
+        public virtual MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
+        {
+            // The only flag this base impl cares about is the generic context, for now
+            return MethodRequiresGenericContext(method, handle) ? MethodAbiFlags.HasGenericContext : 0;
+        }
+
+        protected virtual bool MethodRequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)
         {
             // If neither the method nor its declaring type is generic,
             // we do not need to worry about the generic context at all.
@@ -386,9 +403,13 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types",
             Justification = "We want to catch and swallow exceptions from CreateDelegate.")]
-        public virtual void Compile(MethodBase method)
+        public virtual void Compile(MethodBase method, RuntimeMethodHandle handle = default)
         {
-            var handle = GetMethodHandle(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
             RuntimeHelpers.PrepareMethod(handle);
             Helpers.Assert(TryInvokeBclCompileMethod(handle));
 
@@ -398,11 +419,12 @@ namespace MonoMod.Core.Platforms.Runtimes
                 // method instead of just the unboxing stub. The RuntimeMethodHandle we got from the MethodBase
                 // points to the unboxing stub. We could use knowledge of the runtime to get the non-unboxing stub
                 // MethodDesc, then create a RuntimeMethodHandle for it, however that may change per-runtime.
-                // If we want to implement that, we can implement TryGetCacnonicalMethodHandle.
+                // If we want to implement that, we can implement TryGetCanonicalMethodHandle.
 
-                if (TryGetCanonicalMethodHandle(ref handle))
+
+                if (TryGetNonStubMethodHandle(handle, out var nonStub))
                 {
-                    Helpers.Assert(TryInvokeBclCompileMethod(handle));
+                    Helpers.Assert(TryInvokeBclCompileMethod(nonStub));
                 }
                 else
                 {
@@ -419,7 +441,11 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
         }
 
-        protected virtual bool TryGetCanonicalMethodHandle(ref RuntimeMethodHandle handle) => false;
+        protected virtual bool TryGetNonStubMethodHandle(RuntimeMethodHandle handle, out RuntimeMethodHandle outHandle)
+        {
+            outHandle = default;
+            return false;
+        }
 
         // pinning isn't usually needed in fx/core
         public virtual IDisposable? PinMethodIfNeeded(MethodBase method)
@@ -430,14 +456,17 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected static readonly bool IsDebugClr = Switches.TryGetSwitchEnabled(Switches.DebugClr, out var isEnabled) && isEnabled;
 
         // It seems that across all versions of Framework and Core, the layout of the start of a MethodDesc is quite consistent
-        public unsafe virtual void DisableInlining(MethodBase method)
+        public unsafe virtual void DisableInlining(MethodBase method, RuntimeMethodHandle handle = default)
         {
             // https://github.com/dotnet/runtime/blob/89965be3ad2be404dc82bd9e688d5dd2a04bcb5f/src/coreclr/src/vm/method.hpp#L178
             // mdcNotInline = 0x2000
             // References to RuntimeMethodHandle (CORINFO_METHOD_HANDLE) pointing to MethodDesc
             // can be traced as far back as https://ntcore.com/files/netint_injection.htm
 
-            var handle = GetMethodHandle(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
 
             var offset = 0
               + (IsDebugClr ? 0 // #ifdef _DEBUG
@@ -457,11 +486,14 @@ namespace MonoMod.Core.Platforms.Runtimes
             *m_wFlags |= 0x2000;
         }
 
-        public virtual IntPtr GetMethodEntryPoint(MethodBase method)
+        public virtual IntPtr GetMethodEntryPoint(MethodBase method, RuntimeMethodHandle handle = default)
         {
             method = GetIdentifiable(method);
 
-            if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
+            // note: if handle != GetMethodHandleCore(), then it's probably actually pointing to the real method and not an unboxing stub.
+            var handleIsDefaultReflectionHandle = handle == default || handle == GetMethodHandleCore(method);
+
+            if (handleIsDefaultReflectionHandle && method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
             {
                 /* .NET has got TWO MethodDescs and thus TWO ENTRY POINTS for virtual struct methods (f.e. override ToString).
                  * More info: https://mattwarren.org/2017/08/02/A-look-at-the-internals-of-boxing-in-the-CLR/#unboxing-stub-creation
@@ -489,7 +521,10 @@ namespace MonoMod.Core.Platforms.Runtimes
             else
             {
                 // Your typical method.
-                var handle = GetMethodHandle(method);
+                if (handle == default)
+                {
+                    handle = GetMethodHandle(method);
+                }
                 return handle.GetFunctionPointer();
             }
         }
@@ -556,6 +591,18 @@ namespace MonoMod.Core.Platforms.Runtimes
             {
                 MMDbgLog.Error($"Error in OnMethodCompiledCore: {e}");
             }
+        }
+
+        public virtual bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
+        {
+            throw new NotSupportedException();
+        }
+        public virtual (MethodInfo Method, RuntimeMethodHandle Variant) GetAsyncVariantRealDetourTarget(
+                GetAsyncVariantRealDetourTargetArgs args,
+                AbiArgumentMap argumentMap,
+                out IDisposable? handle)
+        {
+            throw new NotSupportedException();
         }
     }
 }

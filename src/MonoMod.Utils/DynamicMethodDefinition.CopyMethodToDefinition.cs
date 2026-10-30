@@ -38,6 +38,12 @@ namespace MonoMod.Utils
             var bodyFrom = from.GetMethodBody() ?? throw new NotSupportedException("Body-less method");
             var data = bodyFrom.GetILAsByteArray() ?? throw new InvalidOperationException();
 
+            if (from.GetMethodImplementationFlags().Has((System.Reflection.MethodImplAttributes)RuntimeAsync.AsyncIl))
+            {
+                // method is marked async, IL copy needs to be async as well
+                into.ImplAttributes = (Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+            }
+
             var moduleTo = into.Module;
             var bodyTo = into.Body;
             var processor = bodyTo.GetILProcessor();

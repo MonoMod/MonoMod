@@ -201,9 +201,13 @@ namespace MonoMod.Core.Platforms.Runtimes
         public event OnMethodCompiledCallback? OnMethodCompiled;
 #pragma warning restore CS0067 // The event 'MonoRuntime.OnMethodCompiled' is never used
 
-        public unsafe void DisableInlining(MethodBase method)
+        public unsafe void DisableInlining(MethodBase method, RuntimeMethodHandle handle = default)
         {
-            var handle = GetMethodHandle(method);
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
             // https://github.com/mono/mono/blob/34dee0ea4e969d6d5b37cb842fc3b9f73f2dc2ae/mono/metadata/class-internals.h#L64
             var iflags = (ushort*)((long)handle.Value + 2);
             *iflags |= (ushort)MethodImplOptionsEx.NoInlining;
@@ -230,10 +234,10 @@ namespace MonoMod.Core.Platforms.Runtimes
             return method.MethodHandle;
         }
 
-        public bool RequiresGenericContext(MethodBase method)
+        public MethodAbiFlags GetMethodAbiFlags(MethodBase method, RuntimeMethodHandle handle = default)
         {
-            // Mono never provides generic context through a hidden argument.
-            return false;
+            // Mono never provides generic context through a hidden argument, and doesn't support runtimeasync
+            return 0;
         }
 
         private sealed class PrivateMethodPin
@@ -344,20 +348,44 @@ namespace MonoMod.Core.Platforms.Runtimes
             return pinnedHandles.TryGetValue(GetMethodHandle(method), out var pin) ? pin.Pin.Method : method;
         }
 
-        public IntPtr GetMethodEntryPoint(MethodBase method)
+        public IntPtr GetMethodEntryPoint(MethodBase method, RuntimeMethodHandle handle = default)
         {
-            if (pinnedMethods.TryGetValue(method, out var pmp))
+            var defaultHandle = GetMethodHandle(method);
+            if (handle == default)
+            {
+                handle = defaultHandle;
+            }
+
+            if (handle == defaultHandle && pinnedMethods.TryGetValue(method, out var pmp))
             {
                 return pmp.Pin.Handle.GetFunctionPointer();
             }
-            var handle = GetMethodHandle(method);
+
             return handle.GetFunctionPointer();
         }
 
-        public void Compile(MethodBase method)
+        public void Compile(MethodBase method, RuntimeMethodHandle handle = default)
         {
+            if (handle == default)
+            {
+                handle = GetMethodHandle(method);
+            }
+
             // GetFunctionPointer forces the method to be compiled on Mono
-            _ = GetMethodHandle(method).GetFunctionPointer();
+            _ = handle.GetFunctionPointer();
+        }
+
+        public bool TryGetRuntimeAsyncInfo(MethodBase method, out RuntimeAsyncMethodInfo runtimeAsyncInfo)
+        {
+            throw new NotSupportedException();
+        }
+
+        public (MethodInfo Method, RuntimeMethodHandle Variant) GetAsyncVariantRealDetourTarget(
+                GetAsyncVariantRealDetourTargetArgs args,
+                AbiArgumentMap argumentMap,
+                out IDisposable? handle)
+        {
+            throw new NotSupportedException();
         }
     }
 }

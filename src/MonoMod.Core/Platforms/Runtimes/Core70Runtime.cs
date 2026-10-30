@@ -1,4 +1,7 @@
+using Mono.Cecil.Cil;
+using MonoMod.Utils;
 using System;
+using System.Reflection;
 using static MonoMod.Core.Interop.CoreCLR;
 
 namespace MonoMod.Core.Platforms.Runtimes
@@ -20,5 +23,26 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         protected override int VtableIndexICorJitInfoAllocMem => V70.ICorJitInfoVtable.AllocMemIndex;
         protected override int ICorJitInfoFullVtableCount => V70.ICorJitInfoVtable.TotalVtableCount;
+
+        protected override MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
+        {
+            // starting in .NET 7, the BCL actually exposes helpers for this. Lets use those
+            // instead of hitting the icalls directly.
+            var getRth = typeof(RuntimeTypeHandle).GetMethod("FromIntPtr", BindingFlags.Static | BindingFlags.Public, null, [typeof(IntPtr)], null);
+            Helpers.Assert(getRth is not null);
+
+            var getTypeFromHandle = ((Delegate)Type.GetTypeFromHandle).Method;
+
+            using (var dmd = new DynamicMethodDefinition("Type.GetTypeFromHandle", typeof(Type), [typeof(IntPtr)]))
+            {
+                var il = dmd.GetILProcessor();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, dmd.Module.ImportReference(getRth));
+                il.Emit(OpCodes.Call, dmd.Module.ImportReference(getTypeFromHandle));
+                il.Emit(OpCodes.Ret);
+
+                return dmd.Generate();
+            }
+        }
     }
 }

@@ -288,15 +288,26 @@ namespace MonoMod.Core.Platforms.Runtimes
             public delegate RuntimeMethodHandle CreateRuntimeMethodHandleD(object runtimeMethodInfo);
             public delegate Type GetDeclaringTypeOfMethodHandleD(IntPtr methodHandle);
             public delegate Type GetTypeFromNativeHandleD(IntPtr handle);
+            public delegate RuntimeMethodHandle RuntimeMethodHandle_FromIntPtr(IntPtr value);
 
             public readonly MethodHandle_GetLoaderAllocatorD MethodHandle_GetLoaderAllocator;
             public readonly CreateRuntimeMethodInfoStubD CreateRuntimeMethodInfoStub;
             public readonly CreateRuntimeMethodHandleD CreateRuntimeMethodHandle;
             public readonly GetDeclaringTypeOfMethodHandleD GetDeclaringTypeOfMethodHandle;
             public readonly GetTypeFromNativeHandleD GetTypeFromNativeHandle;
+            public readonly RuntimeMethodHandle_FromIntPtr? Bcl_RuntimeMethodHandle_FromIntPtr;
+
+
 
             public RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
-                => CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
+            {
+                if (Bcl_RuntimeMethodHandle_FromIntPtr is { } bclMeth)
+                {
+                    return bclMeth(handle);
+                }
+
+                return CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
+            }
 
             public JitHookHelpersHolder(Core21Runtime runtime)
             {
@@ -383,6 +394,11 @@ namespace MonoMod.Core.Platforms.Runtimes
 
                     CreateRuntimeMethodHandle = ctorWrapper.CreateDelegate<CreateRuntimeMethodHandleD>();
                 }
+
+                // .NET 7+ expose this helper directly. Since we use this type on even much newer runtimes, 
+                Bcl_RuntimeMethodHandle_FromIntPtr = typeof(RuntimeMethodHandle)
+                    .GetMethod("FromIntPtr", BindingFlags.Public | BindingFlags.Static, null, [typeof(IntPtr)], null)
+                    ?.CreateDelegate<RuntimeMethodHandle_FromIntPtr>();
             }
         }
 

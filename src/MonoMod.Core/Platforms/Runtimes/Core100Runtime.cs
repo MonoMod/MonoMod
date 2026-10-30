@@ -106,6 +106,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             return runtimeMethodInfoStubCtorWrapper;
         }
 
+        /*
         protected override MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
         {
             var method = typeof(RuntimeTypeHandle)
@@ -113,5 +114,6 @@ namespace MonoMod.Core.Platforms.Runtimes
             Helpers.Assert(method is not null);
             return method;
         }
+        */
     }
 }
