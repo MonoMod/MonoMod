@@ -50,6 +50,7 @@ namespace MonoMod.Utils.DMDGenerators
                 this.returnFlags = returnFlags;
                 this.paramFlags = paramFlags;
                 this.byRefLikes = byRefLikes;
+                this.hasByRefs = hasByRefs;
                 this.hasNonFirstByRefs = hasNonFirstByRefs;
             }
 
@@ -572,7 +573,7 @@ namespace MonoMod.Utils.DMDGenerators
             mod.Types.Add(invokerTy);
 
             var invokerMethod = new MethodDefinition("Invoker", CecilMethodAttributes.Public | CecilMethodAttributes.Virtual, mod.TypeSystem.Void);
-            ty.Methods.Add(invoke);
+            invokerTy.Methods.Add(invokerMethod);
 
             genericParams = Enumerable.Range(0, key.NumGenericParams).Select(i => new GenericParameter(i.ToString(null, null), invokerMethod)).ToArray();
             invokerMethod.GenericParameters.AddRange(genericParams);
@@ -594,13 +595,13 @@ namespace MonoMod.Utils.DMDGenerators
                     genericParams.Length > genericIndex ? genericParams[genericIndex] : null,
                     ref genericIndex,
                     ref byreflikeIndex);
-                invoke.Parameters.Add(new(paramType));
+                invokerMethod.Parameters.Add(new(paramType));
             }
 
             // then finally the delegate type
             var delegateParamTy = new GenericInstanceType(ty);
             delegateParamTy.GenericArguments.AddRange(genericParams);
-            invoke.Parameters.Add(new(delegateParamTy));
+            invokerMethod.Parameters.Add(new(delegateParamTy));
 
             var il = invokerMethod.Body.GetILProcessor();
             il.Emit(CecilOpCodes.Ldarg, key.NumParams);

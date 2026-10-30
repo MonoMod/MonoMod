@@ -620,6 +620,8 @@ namespace MonoMod.Core.Platforms
             public readonly RuntimeMethodHandle AsyncDstHandle;
             public readonly AbiArgumentMap AsyncArgumentMap;
 
+            private readonly List<object> keepAlives = new();
+
             public AsyncManagedDetourBox(
                 PlatformTripleDetourFactory factory,
                 MethodBase src, RuntimeAsyncMethodInfo srcAsyncInfo,
@@ -648,6 +650,8 @@ namespace MonoMod.Core.Platforms
                     AsyncDst, AsyncDstHandle,
                     targetSlot.BaseAddress),
                     AsyncArgumentMap, out var asyncTargetHandle);
+
+                keepAlives.Add(realAsyncDst);
 
                 AllocHandles.Add(targetSlot);
                 if (asyncTargetHandle is not null)
@@ -702,6 +706,12 @@ namespace MonoMod.Core.Platforms
                     AllocHandles.Add(newDetour.AltHandle);
                 }
                 Detours.Add(newDetour.Simple);
+            }
+
+            protected override void OnAfterUndo()
+            {
+                base.OnAfterUndo();
+                keepAlives.Clear();
             }
 
             public override unsafe void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, IntPtr codeStart, IntPtr codeRw, ulong codeSize)

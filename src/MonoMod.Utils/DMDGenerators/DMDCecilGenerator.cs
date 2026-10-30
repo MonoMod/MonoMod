@@ -142,28 +142,7 @@ namespace MonoMod.Utils
                         operand = clone.Parameters[param.Index];
 
                     }
-                    else if (operand is IMetadataTokenProvider mtp)
-                    {
-                        operand = mtp.Relink(relinker, clone);
-
-                    }
-
-                    // System.Reflection doesn't contain any volatility info.
-                    // System.Reflection.Emit presumably does something similar to this.
-                    // Mono.Cecil thus isn't aware of the volatility as part of the imported field reference.
-                    // The modifier is still necessary though.
-                    // This is done here instead of the copier as Harmony and other users can't track modreqs
-
-                    // This isn't actually a valid transformation though. A ldfld or stfld can have the volatile
-                    // prefix, without having modreq(IsVolatile) on the field. Adding the modreq() causes the runtime
-                    // to not be able to find the field.
-                    /*if (instr.Previous?.OpCode == OpCodes.Volatile &&
-                        operand is FieldReference fref &&
-                        (fref.FieldType as RequiredModifierType)?.ModifierType != tr_IsVolatile) {
-                        fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
-                    }*/
-
-                    if (operand is DynamicMethodReference dmref)
+                    else if (operand is DynamicMethodReference dmref)
                     {
                         if (instr.OpCode != Mono.Cecil.Cil.OpCodes.Call)
                         {
@@ -186,6 +165,26 @@ namespace MonoMod.Utils
 
                         operand = module.ImportReference(invoker);
                     }
+                    else if (operand is IMetadataTokenProvider mtp)
+                    {
+                        operand = mtp.Relink(relinker, clone);
+
+                    }
+
+                    // System.Reflection doesn't contain any volatility info.
+                    // System.Reflection.Emit presumably does something similar to this.
+                    // Mono.Cecil thus isn't aware of the volatility as part of the imported field reference.
+                    // The modifier is still necessary though.
+                    // This is done here instead of the copier as Harmony and other users can't track modreqs
+
+                    // This isn't actually a valid transformation though. A ldfld or stfld can have the volatile
+                    // prefix, without having modreq(IsVolatile) on the field. Adding the modreq() causes the runtime
+                    // to not be able to find the field.
+                    /*if (instr.Previous?.OpCode == OpCodes.Volatile &&
+                        operand is FieldReference fref &&
+                        (fref.FieldType as RequiredModifierType)?.ModifierType != tr_IsVolatile) {
+                        fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
+                    }*/
 
                     if (accessChecksIgnored != null && operand is MemberReference mref)
                     {
