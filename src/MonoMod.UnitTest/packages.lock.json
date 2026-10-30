@@ -267,21 +267,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -551,21 +551,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -835,21 +835,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -1154,21 +1154,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -1438,21 +1438,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -1704,21 +1704,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -1988,21 +1988,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -2272,21 +2272,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -2556,21 +2556,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -2840,21 +2840,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
@@ -3124,21 +3124,21 @@
           "xunit.extensibility.core": "[2.4.2]"
         }
       },
-      "monomod.core": {
-        "type": "Project",
-        "dependencies": {
-          "Mono.Cecil": "[0.11.6, )",
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "MonoMod.Iced": "[1.21.0, )",
-          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
-        }
-      },
-      "MonoMod.Iced": {
+      "iced": {
         "type": "Project",
         "dependencies": {
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )"
+        }
+      },
+      "monomod.core": {
+        "type": "Project",
+        "dependencies": {
+          "Iced": "[1.21.0, )",
+          "Mono.Cecil": "[0.11.6, )",
+          "MonoMod.Backports": "[1.1.2, )",
+          "MonoMod.ILHelpers": "[1.1.0, )",
+          "MonoMod.Utils": "[25.1.0-alpha.dev, )"
         }
       },
       "monomod.patcher": {
