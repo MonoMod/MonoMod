@@ -9,6 +9,7 @@ namespace MonoMod.Core.Platforms.Runtimes
         public Core31Runtime(ISystem system) : base(system) { }
 
         protected override InvokeCompileMethodPtr InvokeCompileMethodPtr => V31.InvokeCompileMethodPtr;
+        protected override int VtableIndexICorJitInfoGetJitFlags => V31.ICorJitInfoVtable.GetJitFlagsIndex;
 
         protected override Delegate CastCompileHookToRealType(Delegate del)
             => del.CastDelegate<V31.CompileMethodDelegate>();

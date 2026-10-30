@@ -27,13 +27,13 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         }
 
         /// <inheritdoc/>
-        public unsafe IntPtr CreateAlternateEntrypoint(IntPtr entrypoint, int minLength, out IDisposable? handle)
+        public unsafe IntPtr CreateAlternateEntrypoint(IntPtr entrypointPc, IntPtr entrypointCode, int minLength, out IDisposable? handle)
         {
             // IntPtr -> ulong must not sign-extend 32-bit addresses
-            ulong srcIp = (nuint)(nint)entrypoint;
+            ulong srcIp = (nuint)(nint)entrypointPc;
 
             // the decoder only reads the bytes of the instructions it decodes, so this span never touches memory past the last one
-            var code = new ReadOnlySpan<byte>((void*)entrypoint, minLength + X86InstructionDecoder.MaxInstructionLength);
+            var code = new ReadOnlySpan<byte>((void*)entrypointCode, minLength + X86InstructionDecoder.MaxInstructionLength);
 
             // every instruction is at least one byte, so there are at most minLength of them
             var insns = minLength <= MaxStackInstructions
@@ -55,8 +55,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             IAllocatedMemory? allocated;
             if (needsNearAlloc)
             {
-                var low = (nint)entrypoint + int.MinValue;
-                var high = (nint)entrypoint + int.MaxValue;
+                var low = (nint)entrypointPc + int.MinValue;
+                var high = (nint)entrypointPc + int.MaxValue;
                 for (var i = 0; i < insns.Length; i++)
                 {
                     ref readonly var insn = ref insns[i];
@@ -76,7 +76,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                     throw new InvalidOperationException("No allocation range can preserve the block's relative operands");
 
                 Helpers.Assert(alloc.TryAllocateInRange(
-                    new(entrypoint, low, high, new(maxSize) { Executable = true }), out allocated));
+                    new(entrypointPc, low, high, new(maxSize) { Executable = true }), out allocated));
             }
             else
             {

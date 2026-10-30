@@ -100,7 +100,7 @@ namespace MonoMod.Utils
 
             var il = dm.GetILGenerator();
 
-            _DMDEmit.Generate(dmd, dm, il);
+            _DMDEmit.Generate(dmd, dm, il, null);
 
             return dm;
         }

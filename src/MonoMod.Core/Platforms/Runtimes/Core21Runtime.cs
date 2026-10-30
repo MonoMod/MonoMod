@@ -60,6 +60,11 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected virtual int VtableIndexICorJitCompilerGetVersionGuid => 4;
         protected virtual int VtableIndexICorJitCompilerCompileMethod => 0;
 
+        protected virtual int VtableIndexICorJitInfoGetJitFlags => V21.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected virtual int CORJIT_FLAG_OSR => -1;
+        protected virtual int SizeofCORJIT_FLAG => 8;
+        protected virtual InvokeGetJitFlagsPtr InvokeGetJitFlagsPtr => V21.InvokeGetJitFlagsPtr;
+
         protected virtual InvokeCompileMethodPtr InvokeCompileMethodPtr => V21.InvokeCompileMethodPtr;
 
         protected virtual Delegate CastCompileHookToRealType(Delegate del)
@@ -121,6 +126,28 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             var del = new JitHookDelegateHolder(this, InvokeCompileMethodPtr, compileMethod).CompileMethodHook;
             return del;
+        }
+
+        protected unsafe bool GetJitFlagsOSR(IntPtr corJitInfo)
+        {
+            var flgOsr = CORJIT_FLAG_OSR;
+
+            if (flgOsr >= 0)
+            {
+                // we have an OSR flag, worth checking
+                var flagsSizeBytes = SizeofCORJIT_FLAG;
+                var sizeUlongs = (flagsSizeBytes + sizeof(ulong) - 1) / sizeof(ulong);
+                var pJitFlags = stackalloc ulong[sizeUlongs];
+
+                var pVtbl = *(IntPtr**)corJitInfo;
+                var pGetJitFlags = pVtbl[VtableIndexICorJitInfoGetJitFlags];
+                var wroteBytes = InvokeGetJitFlagsPtr.InvokeGetJitFlags(pGetJitFlags, corJitInfo, pJitFlags, (uint)(sizeUlongs * sizeof(ulong)));
+
+                var osrUlong = pJitFlags[flgOsr / 64];
+                return (osrUlong & (1uL << flgOsr)) != 0;
+            }
+
+            return false;
         }
 
         private sealed class JitHookDelegateHolder
@@ -207,36 +234,43 @@ namespace MonoMod.Core.Platforms.Runtimes
                         return result;
                     }
 
-                    if (hookEntrancy == 1)
+                    if (hookEntrancy == 1 && result == CorJitResult.CORJIT_OK)
                     {
                         try
                         {
-                            // This is the top level JIT entry point, do our custom stuff
-                            RuntimeTypeHandle[]? genericClassArgs = null;
-                            RuntimeTypeHandle[]? genericMethodArgs = null;
+                            // check JIT flags so we skip OSR compiles
+                            var isOsr = Runtime.GetJitFlagsOSR(corJitInfo);
 
-                            if (methodInfo->args.sigInst.classInst != null)
+                            // skip invoking the hook for OSR compilation
+                            if (!isOsr)
                             {
-                                genericClassArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.classInstCount];
-                                for (var i = 0; i < genericClassArgs.Length; i++)
-                                {
-                                    genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.classInst[i]).TypeHandle;
-                                }
-                            }
-                            if (methodInfo->args.sigInst.methInst != null)
-                            {
-                                genericMethodArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.methInstCount];
-                                for (var i = 0; i < genericMethodArgs.Length; i++)
-                                {
-                                    genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.methInst[i]).TypeHandle;
-                                }
-                            }
+                                // This is the top level JIT entry point, do our custom stuff
+                                RuntimeTypeHandle[]? genericClassArgs = null;
+                                RuntimeTypeHandle[]? genericMethodArgs = null;
 
-                            var declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
-                            var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
+                                if (methodInfo->args.sigInst.classInst != null)
+                                {
+                                    genericClassArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.classInstCount];
+                                    for (var i = 0; i < genericClassArgs.Length; i++)
+                                    {
+                                        genericClassArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.classInst[i]).TypeHandle;
+                                    }
+                                }
+                                if (methodInfo->args.sigInst.methInst != null)
+                                {
+                                    genericMethodArgs = new RuntimeTypeHandle[methodInfo->args.sigInst.methInstCount];
+                                    for (var i = 0; i < genericMethodArgs.Length; i++)
+                                    {
+                                        genericMethodArgs[i] = JitHookHelpers.GetTypeFromNativeHandle(methodInfo->args.sigInst.methInst[i]).TypeHandle;
+                                    }
+                                }
 
-                            // codeStart and codeStartRw are the same because this runtime doesn't distinguish them at this point in the JIT
-                            Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr)(*pNativeEntry), (IntPtr)(*pNativeEntry), *pNativeSizeOfCode);
+                                var declaringType = JitHookHelpers.GetDeclaringTypeOfMethodHandle(methodInfo->ftn).TypeHandle;
+                                var method = JitHookHelpers.CreateHandleForHandlePointer(methodInfo->ftn);
+
+                                // codeStart and codeStartRw are the same because this runtime doesn't distinguish them at this point in the JIT
+                                Runtime.OnMethodCompiledCore(declaringType, method, genericClassArgs, genericMethodArgs, (IntPtr)(*pNativeEntry), (IntPtr)(*pNativeEntry), *pNativeSizeOfCode);
+                            }
                         }
                         catch
                         {
@@ -288,15 +322,26 @@ namespace MonoMod.Core.Platforms.Runtimes
             public delegate RuntimeMethodHandle CreateRuntimeMethodHandleD(object runtimeMethodInfo);
             public delegate Type GetDeclaringTypeOfMethodHandleD(IntPtr methodHandle);
             public delegate Type GetTypeFromNativeHandleD(IntPtr handle);
+            public delegate RuntimeMethodHandle RuntimeMethodHandle_FromIntPtr(IntPtr value);
 
             public readonly MethodHandle_GetLoaderAllocatorD MethodHandle_GetLoaderAllocator;
             public readonly CreateRuntimeMethodInfoStubD CreateRuntimeMethodInfoStub;
             public readonly CreateRuntimeMethodHandleD CreateRuntimeMethodHandle;
             public readonly GetDeclaringTypeOfMethodHandleD GetDeclaringTypeOfMethodHandle;
             public readonly GetTypeFromNativeHandleD GetTypeFromNativeHandle;
+            public readonly RuntimeMethodHandle_FromIntPtr? Bcl_RuntimeMethodHandle_FromIntPtr;
+
+
 
             public RuntimeMethodHandle CreateHandleForHandlePointer(IntPtr handle)
-                => CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
+            {
+                if (Bcl_RuntimeMethodHandle_FromIntPtr is { } bclMeth)
+                {
+                    return bclMeth(handle);
+                }
+
+                return CreateRuntimeMethodHandle(CreateRuntimeMethodInfoStub(handle, MethodHandle_GetLoaderAllocator(handle)));
+            }
 
             public JitHookHelpersHolder(Core21Runtime runtime)
             {
@@ -383,6 +428,11 @@ namespace MonoMod.Core.Platforms.Runtimes
 
                     CreateRuntimeMethodHandle = ctorWrapper.CreateDelegate<CreateRuntimeMethodHandleD>();
                 }
+
+                // .NET 7+ expose this helper directly. Since we use this type on even much newer runtimes, 
+                Bcl_RuntimeMethodHandle_FromIntPtr = typeof(RuntimeMethodHandle)
+                    .GetMethod("FromIntPtr", BindingFlags.Public | BindingFlags.Static, null, [typeof(IntPtr)], null)
+                    ?.CreateDelegate<RuntimeMethodHandle_FromIntPtr>();
             }
         }
 

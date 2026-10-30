@@ -30,7 +30,8 @@
     <!-- Check RID. -->
     <Warning Condition="'$(RuntimeIdentifier)' != '' 
              and !$([System.String]::Copy('$(RuntimeIdentifier)').Contains('-x86'))
-             and !$([System.String]::Copy('$(RuntimeIdentifier)').Contains('-x64'))"
+             and !$([System.String]::Copy('$(RuntimeIdentifier)').Contains('-x64'))
+             and !$([System.String]::Copy('$(RuntimeIdentifier)').Contains('-arm64'))"
              File="$(MSBuildProjectFullPath)"
              Text="$(_MonoMod_ThisPackage) $(_MonoMod_DoForm) not support $(RuntimeIdentifier)." />
     

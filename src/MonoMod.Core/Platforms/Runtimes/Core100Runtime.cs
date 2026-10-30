@@ -26,6 +26,10 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected override int VtableIndexICorJitInfoAllocMem => V100.ICorJitInfoVtable.AllocMemIndex;
         protected override int ICorJitInfoFullVtableCount => V100.ICorJitInfoVtable.TotalVtableCount;
 
+        protected override int VtableIndexICorJitInfoGetJitFlags => V100.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected override int CORJIT_FLAG_OSR => 7;
+        protected override int SizeofCORJIT_FLAG => 24;
+
         protected override unsafe void MakeAssemblySystemAssembly(Assembly assembly)
         {
             // RuntimeAssembly.m_assembly is an Assembly*,
@@ -106,6 +110,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             return runtimeMethodInfoStubCtorWrapper;
         }
 
+        /*
         protected override MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
         {
             var method = typeof(RuntimeTypeHandle)
@@ -113,5 +118,6 @@ namespace MonoMod.Core.Platforms.Runtimes
             Helpers.Assert(method is not null);
             return method;
         }
+        */
     }
 }

@@ -156,7 +156,7 @@ namespace MonoMod.Utils
                 return asm.FullName;
 
             var hash = asm.Hash;
-            if (hash.Length != AssemblyHashPrefix.Length + 4)
+            if (hash is null || hash.Length != AssemblyHashPrefix.Length + 4)
                 return asm.FullName;
 
             for (var i = 0; i < AssemblyHashPrefix.Length; i++)
@@ -433,12 +433,13 @@ namespace MonoMod.Utils
                     type = modules
                         .Select(module => module.GetType(mref.FullName.Replace("/", "+", StringComparison.Ordinal), false, false))
                         .FirstOrDefault(m => m != null);
-                    if (type == null)
-                        type = modules
+                    type ??= modules
                             .Select(module => module.GetTypes().FirstOrDefault(m => mref.Is(m)))
                             .FirstOrDefault(m => m != null);
                     if (type == null && !refetchingModules)
+                    {
                         goto RefetchModules;
+                    }
                 }
 
                 return _Cache(cacheKey, type!);

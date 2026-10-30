@@ -434,7 +434,6 @@ namespace MonoMod.Utils
 
         private static void EmitLoadByref(ILCursor il, ReturnTypeClass rtc, Type returnType)
         {
-
             // then we actually want to load the reference to it
             switch (rtc)
             {

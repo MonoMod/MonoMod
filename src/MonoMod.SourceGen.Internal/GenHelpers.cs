@@ -64,6 +64,19 @@ namespace MonoMod.SourceGen.Internal
                 _ => "/*unknown ref kind*/ ",
             };
 
+        public static string GetAccessibilityModifier(Accessibility acc)
+            => acc switch
+            {
+                Accessibility.NotApplicable => "",
+                Accessibility.Private => "private ",
+                Accessibility.ProtectedAndInternal => "private protected ",
+                Accessibility.Protected => "protected ",
+                Accessibility.Internal => "internal ",
+                Accessibility.ProtectedOrInternal => "protected internal ",
+                Accessibility.Public => "public ",
+                _ => "/*unknown accessibility*/ ",
+            };
+
         public static TypeContext CreateTypeContext(INamedTypeSymbol type)
         {
             var innermostType = type;

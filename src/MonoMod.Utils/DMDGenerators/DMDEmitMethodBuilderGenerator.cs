@@ -1,5 +1,7 @@
-﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
+﻿#if METHODBUILDER_SUPPORTED
+using MonoMod.Backports;
 using MonoMod.Logs;
+using MonoMod.Utils.DMDGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,15 +13,18 @@ namespace MonoMod.Utils
 {
     public sealed class DMDEmitMethodBuilderGenerator : DMDGenerator<DMDEmitMethodBuilderGenerator>
     {
-
         private static readonly bool _MBCanRunAndCollect = Enum.IsDefined(typeof(AssemblyBuilderAccess), "RunAndCollect");
+
+        protected override bool SupportsAsyncMethods => true;
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
         {
             var typeBuilder = context as TypeBuilder;
-            var method = GenerateMethodBuilder(dmd, typeBuilder);
+
+            var method = GenerateMethodBuilder(dmd, typeBuilder, out var refsHolder);
             typeBuilder = (TypeBuilder)method.DeclaringType!;
             var type = typeBuilder.CreateType();
+
             var dumpPath = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
             if (!string.IsNullOrEmpty(dumpPath))
             {
@@ -45,11 +50,14 @@ namespace MonoMod.Utils
                 type = ReflectionHelper.Load(stream).GetType(typeBuilder.FullName!, true, false)!;
 #endif
             }
+
+            refsHolder.SetFields(type);
+
             return type.GetMethod(method.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
                 ?? throw new InvalidOperationException("Could not find generated method");
         }
 
-        public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder)
+        public static MethodBuilder GenerateMethodBuilder(DynamicMethodDefinition dmd, TypeBuilder? typeBuilder, out GeneratedAssemblyReferenceHolder refHolder)
         {
             Helpers.ThrowIfArgumentNull(dmd);
             var orig = dmd.OriginalMethod;
@@ -119,7 +127,7 @@ namespace MonoMod.Utils
 #endif
                 typeBuilder = module.DefineType(
                     DebugFormatter.Format($"DMD<{orig}>?{dmd.GetHashCode()}"),
-                    System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class
+                    TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class
                 );
             }
 
@@ -207,20 +215,43 @@ namespace MonoMod.Utils
                 SanitizeForMono(ref argTypesModOpt);
             }
 #endif
-
+            
             var mb = typeBuilder.DefineMethod(
                 dmd.Name ?? (orig?.Name ?? def.Name).Replace('.', '_'),
-                System.Reflection.MethodAttributes.HideBySig | System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Static,
+                MethodAttributes.HideBySig | MethodAttributes.Public | MethodAttributes.Static,
                 CallingConventions.Standard,
                 returnType, returnTypeModReq, returnTypeModOpt,
                 argTypes, argTypesModReq, argTypesModOpt
             );
             var il = mb.GetILGenerator();
 
-            _DMDEmit.Generate(dmd, mb, il);
+            var implAttrs = (int)(MethodImplAttributes.IL | MethodImplAttributes.Managed);
+            if (dmd.Definition.ImplAttributes.Has(Mono.Cecil.MethodImplAttributes.NoInlining))
+            {
+                implAttrs |= (int)MethodImplAttributes.NoInlining;
+            }
+            if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)MethodImplOptionsEx.AggressiveOptimization))
+            {
+                implAttrs |= (int)MethodImplOptionsEx.AggressiveOptimization;
+            }
+            if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl))
+            {
+                implAttrs |= (int)RuntimeAsync.AsyncIl;
+            }
+            mb.SetImplementationFlags((MethodImplAttributes)implAttrs);
+
+            refHolder = new GeneratedAssemblyReferenceHolder();
+            _DMDEmit.Generate(dmd, mb, il, refHolder);
+
+            if (refHolder.NeedsReferencesField)
+            {
+                var refsField = typeBuilder.DefineField("references", typeof(object), FieldAttributes.Static);
+                refHolder.SetReferencesFieldName(refsField.Name);
+            }
 
             return mb;
         }
+
 #if NETFRAMEWORK
         private static void SanitizeForMono(ref Type[] toSanitize)
         {

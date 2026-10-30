@@ -23,11 +23,11 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             alloc = system.MemoryAllocator;
         }
 
-        public unsafe IntPtr CreateAlternateEntrypoint(IntPtr entrypoint, int minLength, out IDisposable? handle)
+        public unsafe IntPtr CreateAlternateEntrypoint(IntPtr entrypointPc, IntPtr entrypointCode, int minLength, out IDisposable? handle)
         {
-            ulong srcPc = (nuint)(nint)entrypoint;
+            ulong srcPc = (nuint)(nint)entrypointPc;
             if ((srcPc & 3) != 0)
-                throw new ArgumentException("A64 code must be 4-byte aligned", nameof(entrypoint));
+                throw new ArgumentException("A64 code must be 4-byte aligned", nameof(entrypointPc));
 
             var count = (minLength + 3) / 4;
             var insns = count <= MaxStackInsnCount
@@ -36,7 +36,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             insns = insns.Slice(0, count);
             for (var i = 0; i < count; i++)
             {
-                var raw = *(uint*)((nint)entrypoint + (i * 4));
+                var raw = *(uint*)((nint)entrypointCode + (i * 4));
                 insns[i] = Arm64CodeRelocator.Decode(raw, srcPc + (ulong)(i * 4));
             }
 
@@ -44,8 +44,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             var request = new AllocationRequest(maxSize) { Executable = true };
 
             // prefer direct-branch range of the original; anything further away needs indirect branches
-            var low = (nint)entrypoint > DirectBranchReach ? (nint)entrypoint - DirectBranchReach : 0;
-            if (!alloc.TryAllocateInRange(new(entrypoint, low, (nint)entrypoint + DirectBranchReach, request), out var allocated))
+            var low = (nint)entrypointPc > DirectBranchReach ? (nint)entrypointPc - DirectBranchReach : 0;
+            if (!alloc.TryAllocateInRange(new(entrypointPc, low, (nint)entrypointPc + DirectBranchReach, request), out var allocated))
             {
                 MMDbgLog.Warning($"Could not allocate alternate entrypoint for 0x{srcPc:x16} within direct branch range; branches out of it will be indirect");
                 Helpers.Assert(alloc.TryAllocate(request, out allocated));

@@ -10,3 +10,4 @@ MM.ILOverload.NoFile |  | Error | ILOverloadGenerator
 MMA001 | RuntimeIssues | Error | DoNotPinStrings
 MMA002 | RuntimeIssues | Warning | DoNotSizeofGenerics
 MMA003 | RuntimeIssues | Warning | DoNotSizeofGenerics
+MMA004 | Interop | Error | DoNotSizeofCppStruct

@@ -41,7 +41,7 @@ namespace MonoMod.Core.Platforms
         ListGenericInstantiations = 0x40,
 
         /// <summary>
-        /// This runtime supports disabling inlining on methods, and implements <see cref="IRuntime.DisableInlining(System.Reflection.MethodBase)"/>.
+        /// This runtime supports disabling inlining on methods, and implements <see cref="IRuntime.DisableInlining(System.Reflection.MethodBase, RuntimeMethodHandle)"/>.
         /// </summary>
         DisableInlining = 0x10,
         /// <summary>
@@ -72,9 +72,14 @@ namespace MonoMod.Core.Platforms
         HasKnownABI = 0x400,
 
         /// <summary>
-        /// This method requires a custom implementation to reliably compile methods, and implements <see cref="IRuntime.Compile(System.Reflection.MethodBase)"/>.,
+        /// This method requires a custom implementation to reliably compile methods, and implements <see cref="IRuntime.Compile(System.Reflection.MethodBase, RuntimeMethodHandle)"/>.,
         /// </summary>
         RequiresCustomMethodCompile = 0x800,
+
+        /// <summary>
+        /// This runtime supports runtime async, and implements <see cref="IRuntime.TryGetRuntimeAsyncInfo(System.Reflection.MethodBase, out RuntimeAsyncMethodInfo)"/>.
+        /// </summary>
+        HasRuntimeAsync = 0x1000,
 
         // TODO: what other runtime feature flags would be useful to have?
     }

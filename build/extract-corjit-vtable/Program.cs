@@ -1,14 +1,34 @@
 ﻿using ClangSharp;
 using ClangSharp.Interop;
 
-if (args is not [{ } dotnetRepoRoot, ..])
+if (args is not [{ } dotnetRepoRoot, var layout, ..])
 {
-    await StdErr.WriteLineAsync("takes 1 arguments: dotnetRepoRoot");
+    await StdErr.WriteLineAsync("takes 1 arguments: dotnetRepoRoot [layout]");
     return 1;
 }
 
+string incPath;
+switch (layout)
+{
+    case "coreclr":
+        incPath = Path.Combine(dotnetRepoRoot, "src", "inc");
+        break;
+
+    case "runtime-5":
+        incPath = Path.Combine(dotnetRepoRoot, "src", "coreclr", "src", "inc");
+        break;
+
+    case "runtime":
+    case null:
+        incPath = Path.Combine(dotnetRepoRoot, "src", "coreclr", "inc");
+        break;
+    default:
+        await StdErr.WriteLineAsync($"unknown layout '{layout}'");
+        return 2;
+}
+
 using var index = CXIndex.Create();
-var coreclrInc = Path.Combine(dotnetRepoRoot, "src", "coreclr", "inc");
+var coreclrInc = incPath;
 var corjitScanH = Path.Combine(coreclrInc, "corjit-scan.h");
 var cxtu = CXTranslationUnit.CreateFromSourceFile(index, corjitScanH,
     ["-x", "c++", "-std=c++17"],
@@ -22,9 +42,41 @@ var cxtu = CXTranslationUnit.CreateFromSourceFile(index, corjitScanH,
     typedef __UINT32_TYPE__ uint32_t;
     typedef __INT64_TYPE__ int64_t;
     typedef __UINT64_TYPE__ uint64_t;
+    typedef void *LPVOID;
+    typedef unsigned long DWORD;
+    typedef unsigned short WORD;
+    typedef unsigned short USHORT;
+    typedef unsigned char BYTE;
+    typedef unsigned long ULONG;
+    typedef long LONG;
+    typedef unsigned int ULONG32;
+    typedef int INT;
+    typedef size_t SIZE_T;
+    typedef wchar_t WCHAR, *PWCHAR;
+    typedef int BOOL;
+    typedef char const *LPCSTR;
+    typedef char *LPCSTR;
+    typedef wchar_t const *LPCWSTR;
+    typedef wchar_t *LPCWSTR;
+    typedef DWORD HRESULT:
     #include "corinfo.h"
     #include "corjit.h"
     """)]);
+
+if (cxtu.NumDiagnostics > 0)
+{
+    await StdOut.WriteLineAsync($"Loaded sources with {cxtu.NumDiagnostics} diagnostics:");
+    await StdOut.WriteLineAsync($"---");
+    foreach (var diag in cxtu.DiagnosticSet)
+    {
+        var str = diag.Format(CXDiagnosticDisplayOptions.CXDiagnostic_DisplaySourceLocation
+            | CXDiagnosticDisplayOptions.CXDiagnostic_DisplaySourceLocation
+            | CXDiagnosticDisplayOptions.CXDiagnostic_DisplayCategoryId);
+        await StdOut.WriteLineAsync(str.ToString());
+    }
+    await StdOut.WriteLineAsync($"---");
+}
+
 using var tu = TranslationUnit.GetOrCreate(cxtu);
 
 foreach (var decl in tu.TranslationUnitDecl.Decls)
@@ -80,6 +132,10 @@ foreach (var decl in tu.TranslationUnitDecl.Decls)
             {
                 await StdOut.WriteLineAsync($"public const int AllocMemIndex = 0x{vtblIdx - 1:X};");
             }
+            if (method.Name is "getJitFlags")
+            {
+                await StdOut.WriteLineAsync($"public const int GetJitFlagsIndex = 0x{vtblIdx - 1:X};");
+            }
         }
     }
 
@@ -89,5 +145,8 @@ foreach (var decl in tu.TranslationUnitDecl.Decls)
 
     break;
 }
+
+await StdOut.WriteLineAsync("");
+await StdOut.WriteLineAsync("(Done!)");
 
 return 0;

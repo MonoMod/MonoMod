@@ -92,7 +92,7 @@ namespace MonoMod.Core.Interop
             "needing duplicates.")]
         public partial class V60 : V50
         {
-            public static class ICorJitInfoVtable
+            public new static class ICorJitInfoVtable
             {
 
                 // src/coreclr/inc/corinfo.h
@@ -276,6 +276,7 @@ namespace MonoMod.Core.Interop
                 // A9: uint16_t getRelocTypeHint(void*)
                 // AA: uint32_t getExpectedTargetArchitecture()
                 // AB: uint32_t getJitFlags(CORJIT_FLAGS*, uint32_t)
+                public const int GetJitFlagsIndex = 0xAB;
                 // AC: bool doesFieldBelongToClass(CORINFO_FIELD_HANDLE, CORINFO_CLASS_HANDLE)
                 public const int TotalVtableCount = 0xAD;
             }

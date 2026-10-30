@@ -1,4 +1,6 @@
 ﻿using Mono.Cecil;
+using MonoMod.Logs;
+using MonoMod.Utils.DMDGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,9 +14,12 @@ namespace MonoMod.Utils
     /// </summary>
     public sealed class DMDCecilGenerator : DMDGenerator<DMDCecilGenerator>
     {
+        protected override bool SupportsAsyncMethods => true;
 
         protected override MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context)
         {
+            var refsHolder = new GeneratedAssemblyReferenceHolder();
+
             var def = dmd.Definition ?? throw new InvalidOperationException();
             var typeDef = context as TypeDefinition;
 
@@ -93,6 +98,22 @@ namespace MonoMod.Utils
                     NoInlining = true
                 };
 
+                if (dmd.Definition.ImplAttributes.Has(Mono.Cecil.MethodImplAttributes.NoInlining))
+                {
+                    clone.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining;
+                }
+
+                // AggressiveOptimization
+                if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)512))
+                {
+                    clone.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)512;
+                }
+
+                if (dmd.Definition.ImplAttributes.Has((Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl))
+                {
+                    clone.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
+
                 foreach (var param in def.Parameters)
                     clone.Parameters.Add(param.Clone().Relink(relinker, clone));
 
@@ -121,10 +142,35 @@ namespace MonoMod.Utils
                         operand = clone.Parameters[param.Index];
 
                     }
+                    else if (operand is DynamicMethodReference dmref)
+                    {
+                        if (instr.OpCode != Mono.Cecil.Cil.OpCodes.Call)
+                        {
+                            throw new InvalidOperationException(DebugFormatter.Format($"Invalid opcode {instr.OpCode} given dynamic method operand {dmref}"));
+                        }
+
+                        var dm = dmref.DynamicMethod;
+
+                        // we need to convert to a delegate, store that in a static field, and load the field before calling the invoker
+                        var (delTy, invoker) = DelegateTypeGenerator.GetDelegateType(MethodSignature.ForMethod(dm));
+
+                        var field = new FieldDefinition($"f{typeDef.Fields.Count}", Mono.Cecil.FieldAttributes.Static, module.ImportReference(delTy));
+                        typeDef.Fields.Add(field);
+
+                        var del = dm.CreateDelegate(delTy);
+                        refsHolder.AddStaticField(field.Name, del);
+
+                        // replace the CURRENT instruction for the ldsfld, so that if we're in the case where we're calling a parameterless method
+                        // and there's a branch targeting that call, it branches to the ldsfld then call correctly
+                        instr.OpCode = Mono.Cecil.Cil.OpCodes.Ldsfld;
+                        operand = field;
+
+                        // then insert the call proper afterwards (which will be fixed up in the next iteration)
+                        body.Instructions.Insert(instri + 1, Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Call, module.ImportReference(invoker)));
+                    }
                     else if (operand is IMetadataTokenProvider mtp)
                     {
                         operand = mtp.Relink(relinker, clone);
-
                     }
 
                     // System.Reflection doesn't contain any volatility info.
@@ -142,24 +188,9 @@ namespace MonoMod.Utils
                         fref.FieldType = new RequiredModifierType(tr_IsVolatile, fref.FieldType);
                     }*/
 
-                    if (operand is DynamicMethodReference dmref)
-                    {
-                        // TODO: Fix up DynamicMethod inline refs.
-                    }
-
                     if (accessChecksIgnored != null && operand is MemberReference mref)
                     {
-                        var asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
-                        if (!accessChecksIgnored.Contains(asmRef.Name))
-                        {
-                            var caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
-                            caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
-                                module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
-                                asmRef.Name
-                            ));
-                            module.Assembly.CustomAttributes.Add(caAccess);
-                            accessChecksIgnored.Add(asmRef.Name);
-                        }
+                        AddIgnoresAccessChecks(module.Assembly, accessChecksIgnored, mref);
                     }
 
                     instr.Operand = operand;
@@ -169,10 +200,10 @@ namespace MonoMod.Utils
 
                 if (def.HasThis)
                 {
-                    TypeReference type = def.DeclaringType;
-                    if (type.IsValueType)
-                        type = new ByReferenceType(type);
-                    clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, type.Relink(relinker, clone)));
+                    TypeReference declType = def.DeclaringType;
+                    if (declType.IsValueType)
+                        declType = new ByReferenceType(declType);
+                    clone.Parameters.Insert(0, new ParameterDefinition("<>_this", Mono.Cecil.ParameterAttributes.None, declType.Relink(relinker, clone)));
                 }
 
                 var envDmdDump = Switches.TryGetSwitchValue(Switches.DMDDumpTo, out var dumpToVal) ? dumpToVal as string : null;
@@ -190,9 +221,22 @@ namespace MonoMod.Utils
                         module.Write(fileStream);
                 }
 
+                if (refsHolder.NeedsReferencesField)
+                {
+                    var field = new FieldDefinition("references", Mono.Cecil.FieldAttributes.Static, module.TypeSystem.Object);
+                    typeDef.Fields.Add(field);
+                    refsHolder.SetReferencesFieldName(field.Name);
+                }
+
+                // TODO: load these in unloadable ALCs when possible?
                 var asm = ReflectionHelper.Load(module);
 
-                return asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false)!
+                var type = asm.GetType(typeDef.FullName.Replace("+", "\\+", StringComparison.Ordinal), false, false);
+                Helpers.Assert(type is not null);
+
+                refsHolder.SetFields(type);
+
+                return type
                     .GetMethod(clone.Name, BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
                     ?? throw new InvalidOperationException("Could not find generated method");
 
@@ -205,5 +249,113 @@ namespace MonoMod.Utils
             }
         }
 
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, MemberReference member)
+        {
+            switch (member)
+            {
+                case FieldReference field:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, field);
+                    return;
+                case MethodReference method:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, method);
+                    return;
+                case TypeReference type:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, type);
+                    return;
+            }
+        }
+
+        private static string GetSourceAssemblyName(MemberReference reference)
+        {
+            var scope = reference is TypeReference tr ? tr.Scope : reference.DeclaringType.Scope;
+
+            return scope.MetadataScopeType switch
+            {
+                MetadataScopeType.AssemblyNameReference => ((AssemblyNameReference)scope).Name,
+                MetadataScopeType.ModuleReference => ((ModuleReference)scope).Name,
+                MetadataScopeType.ModuleDefinition => ((ModuleDefinition)scope).Assembly.Name.Name,
+                _ => throw new NotSupportedException($"MetadataScopeType={scope.MetadataScopeType}"),
+            };
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, FieldReference field)
+        {
+            var asmName = GetSourceAssemblyName(field);
+            if (ignored.Add(asmName))
+            {
+                var caAccess = new CustomAttribute(assemblyBuilder.MainModule.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                    assemblyBuilder.MainModule.ImportReference(typeof(string)),
+                    asmName
+                ));
+                assemblyBuilder.CustomAttributes.Add(caAccess);
+            }
+
+            if (field.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.DeclaringType);
+            }
+
+            if (field.FieldType is not null)
+            {
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.FieldType);
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, MethodReference method)
+        {
+            var asmName = GetSourceAssemblyName(method);
+            if (ignored.Add(asmName))
+            {
+                var caAccess = new CustomAttribute(assemblyBuilder.MainModule.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                    assemblyBuilder.MainModule.ImportReference(typeof(string)),
+                    asmName
+                ));
+                assemblyBuilder.CustomAttributes.Add(caAccess);
+            }
+
+            if (method.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, method.DeclaringType);
+            }
+
+            if (method is GenericInstanceMethod inst)
+            {
+                foreach (var ty in inst.GenericArguments)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, TypeReference type)
+        {
+            if (type.IsGenericParameter)
+                return;
+
+            var asmName = GetSourceAssemblyName(type);
+            if (ignored.Add(asmName))
+            {
+                var caAccess = new CustomAttribute(assemblyBuilder.MainModule.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                    assemblyBuilder.MainModule.ImportReference(typeof(string)),
+                    asmName
+                ));
+                assemblyBuilder.CustomAttributes.Add(caAccess);
+            }
+
+            // do the same for any directly referenced type args
+            if (type is GenericInstanceType inst)
+            {
+                foreach (var ty in inst.GenericArguments)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
     }
 }
