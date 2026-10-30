@@ -6,8 +6,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
     internal sealed class X86AltEntryFactory : IAltEntryFactory
     {
         // above these sizes, scratch buffers go on the heap instead of the stack
-        private const int MaxStackInstructions = 64;
-        private const int MaxStackCodeSize = 1024;
+        private const int MaxStackInstructions = 16;
+        private const int MaxStackCodeSize = 512;
 
         private readonly ISystem system;
         private readonly IMemoryAllocator alloc;
@@ -30,8 +30,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             var code = new ReadOnlySpan<byte>((void*)entrypoint, minLength + X86InstructionDecoder.MaxInstructionLength);
 
             // every instruction is at least one byte, so there are at most minLength of them
-            Span<X86Instruction> insns = minLength <= MaxStackInstructions
-                ? stackalloc X86Instruction[minLength]
+            var insns = minLength <= MaxStackInstructions
+                ? stackalloc X86Instruction[MaxStackInstructions]
                 : new X86Instruction[minLength];
             insns = insns.Slice(0, X86CodeRelocator.DecodeBlock(code, srcIp, is64, minLength, insns, out var blockLength));
 
@@ -60,9 +60,10 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
 
             try
             {
-                Span<byte> buffer = maxSize <= MaxStackCodeSize
-                    ? stackalloc byte[maxSize]
+                var buffer = maxSize <= MaxStackCodeSize
+                    ? stackalloc byte[MaxStackCodeSize]
                     : new byte[maxSize];
+                buffer = buffer.Slice(maxSize);
 
                 var size = X86CodeRelocator.Encode(code, srcIp, insns, blockLength, is64, (nuint)(nint)allocated.BaseAddress, buffer);
                 buffer.Slice(size).Fill(0xCC);

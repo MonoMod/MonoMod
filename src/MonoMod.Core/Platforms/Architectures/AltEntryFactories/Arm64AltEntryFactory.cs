@@ -11,7 +11,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         private const int DirectBranchReach = (128 << 20) - (1 << 20);
 
         // above this size, the scratch buffer goes on the heap instead of the stack
-        private const int MaxStackCodeSize = 1024;
+        private const int MaxStackInsnCount = 16;
+        private const int MaxStackCodeSize = 512;
 
         private readonly ISystem system;
         private readonly IMemoryAllocator alloc;
@@ -29,7 +30,10 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 throw new ArgumentException("A64 code must be 4-byte aligned", nameof(entrypoint));
 
             var count = (minLength + 3) / 4;
-            var insns = new Arm64Instruction[count];
+            var insns = count <= MaxStackInsnCount
+                ? stackalloc Arm64Instruction[MaxStackInsnCount]
+                : new Arm64Instruction[count];
+            insns = insns.Slice(0, count);
             for (var i = 0; i < count; i++)
             {
                 var raw = *(uint*)((nint)entrypoint + (i * 4));
@@ -49,9 +53,10 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
 
             try
             {
-                Span<byte> buffer = maxSize <= MaxStackCodeSize
-                    ? stackalloc byte[maxSize]
+                var buffer = maxSize <= MaxStackCodeSize
+                    ? stackalloc byte[MaxStackCodeSize]
                     : new byte[maxSize];
+                buffer = buffer.Slice(0, maxSize);
 
                 var size = Arm64CodeRelocator.Encode(srcPc, insns, (nuint)(nint)allocated.BaseAddress, buffer);
 

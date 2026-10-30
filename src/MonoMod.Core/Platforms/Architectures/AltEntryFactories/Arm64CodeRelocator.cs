@@ -439,7 +439,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             // the unsigned-offset form with offset 0 and the same destination and size as the literal load
             var rt = literalLoad & 0x1F;
             var opc = literalLoad >> 30;
-            uint opcode = (literalLoad & 0x04000000) != 0
+            var opcode = (literalLoad & 0x04000000) != 0
                 ? opc switch { 0 => 0xBD400000u, 1 => 0xFD400000u, _ => 0x3DC00000u } // LDR St, Dt, Qt
                 : opc switch { 0 => 0xB9400000u, 1 => 0xF9400000u, _ => 0xB9800000u }; // LDR Wt, Xt, LDRSW Xt
             return opcode | ((uint)rb << 5) | rt;

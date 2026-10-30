@@ -16,7 +16,7 @@ namespace MonoMod.UnitTest.Core
 
         // Each function takes no arguments and returns an int in eax, so it is callable under every x86/x86-64 calling convention.
         // Gaps are filled with int3.
-        private static byte[] Code(params object[] offsetsAndHex)
+        private static byte[] X86Code(params object[] offsetsAndHex)
         {
             var code = new byte[CodeSize];
             code.AsSpan().Fill(0xCC);
@@ -39,44 +39,44 @@ namespace MonoMod.UnitTest.Core
             {
                 "jcc rel8 leaving the block",
                 // xor eax, eax ; test eax, eax ; je +5 ; mov eax, 1 ; add eax, 42 ; ret
-                Code(0, "31C0 85C0 7405 B801000000 052A000000 C3"),
+                X86Code(0, "31C0 85C0 7405 B801000000 052A000000 C3"),
                 6, 42, false
             },
             {
                 "call rel32",
                 // call +0x1B ; add eax, 1 ; ret ; ... ; 0x20: mov eax, 41 ; ret
-                Code(0, "E81B000000 83C001 C3", 0x20, "B829000000 C3"),
+                X86Code(0, "E81B000000 83C001 C3", 0x20, "B829000000 C3"),
                 5, 42, false
             },
             {
                 "jcc rel8 back into the block",
                 // xor eax, eax ; mov cl, 7 ; loop: inc eax ; dec cl ; jne loop ; ret
-                Code(0, "31C0 B107 FFC0 FEC9 75FA C3"),
+                X86Code(0, "31C0 B107 FFC0 FEC9 75FA C3"),
                 10, 7, false
             },
             {
                 "loop rel8 back into the block",
                 // mov ecx, 7 ; xor eax, eax ; loop: inc eax ; loop loop ; ret
-                Code(0, "B907000000 31C0 FFC0 E2FC C3"),
+                X86Code(0, "B907000000 31C0 FFC0 E2FC C3"),
                 11, 7, false
             },
             {
                 "rip-relative load",
                 // mov eax, [rip+0x0A] ; ret ; ... ; 0x10: dd 0x12345678
-                Code(0, "8B050A000000 C3", 0x10, "78563412"),
+                X86Code(0, "8B050A000000 C3", 0x10, "78563412"),
                 6, 0x12345678, true
             },
             {
                 "rip-relative operand followed by an immediate",
                 // xor eax, eax ; cmp dword [rip+0x0C], 0x12345678 ; sete al ; ret ; ... ; 0x18: dd 0x12345678
-                Code(0, "31C0 813D0C00000078563412 0F94C0 C3", 0x18, "78563412"),
+                X86Code(0, "31C0 813D0C00000078563412 0F94C0 C3", 0x18, "78563412"),
                 12, 1, true
             },
         };
 
         [Theory]
         [MemberData(nameof(Functions))]
-        public void AltEntryExecutesRelocatedPrologue(string name, byte[] code, int minLength, int expected, bool x64Only)
+        public void AltEntryExecutesRelocatedX64Prologue(string name, byte[] code, int minLength, int expected, bool x64Only)
         {
             var triple = PlatformTriple.Current;
             if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)
@@ -223,7 +223,7 @@ namespace MonoMod.UnitTest.Core
                 return;
             }
 
-            var code = Code(0, hex);
+            var code = X86Code(0, hex);
             var length = 0;
             foreach (var part in hex.Split(' '))
                 length += part.Length / 2;
@@ -254,7 +254,8 @@ namespace MonoMod.UnitTest.Core
                     long jumpTarget = tail[0] switch
                     {
                         0xE9 => (long)altEntry + length + 5 + BitConverter.ToInt32(tail.Slice(1, 4).ToArray(), 0),
-                        0xFF when tail[1] == 0x25 && BitConverter.ToInt32(tail.Slice(2, 4).ToArray(), 0) == 0 => BitConverter.ToInt64(tail.Slice(6, 8).ToArray(), 0),
+                        0xFF when tail[1] == 0x25 && BitConverter.ToInt32(tail.Slice(2, 4).ToArray(), 0) == 0
+                            => BitConverter.ToInt64(tail.Slice(6, 8).ToArray(), 0),
                         _ => throw new Xunit.Sdk.XunitException($"{name}: no jump back after the relocated code"),
                     };
                     Assert.Equal((long)fn + length, jumpTarget);
