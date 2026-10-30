@@ -221,10 +221,13 @@ namespace MonoMod.Core.Platforms
                         IsApplying = false;
                     }
                 }
+
+                OnAfterUndoOutsideLock();
             }
 
             protected abstract void OnBeforeUndo();
             protected abstract void OnAfterUndo();
+            protected virtual void OnAfterUndoOutsideLock() { }
 
             // NOTE: requires lock being held
             protected void UndoCore()
@@ -317,9 +320,20 @@ namespace MonoMod.Core.Platforms
             {
                 MMDbgLog.Trace($"Undoing managed detour from {SrcMethod} to {DstMethod}");
             }
+            protected override void OnAfterUndo() { }
 
-            protected override void OnAfterUndo()
+            protected override void OnAfterUndoOutsideLock()
             {
+                base.OnAfterUndoOutsideLock();
+
+                // note: it is safe to do this outside the lock, since if we recieve a callback after we've already undone,
+                // we'll bail out after acquireing that lock anyway. 
+
+                // Further, we *need* to do this, since this avoids lock inversion in the undo path relative to
+                // OnRelatedMethodCompiled:
+                // - In the Undo path, we would have lock (Sync) { lock (related.Lock) { ... } }
+                // - In the OnRelatedMethodCompiled path, we have lock (related.Lock) { lock (Sync) { ... } }
+                // This way, we have on this path lock (Sync) { ... } lock (related.Lock) { ... } instead
                 if (Factory.SupportsJitHook)
                 {
                     Factory.RemoveRelatedDetour(SrcMethod, this);
