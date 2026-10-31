@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Security;
 #if NETFRAMEWORK
 using System.Linq;
@@ -18,7 +19,6 @@ namespace MonoMod.Utils
 {
     public sealed partial class DynamicMethodDefinition : IDisposable
     {
-
         static DynamicMethodDefinition()
         {
             _InitCopier();
@@ -51,7 +51,7 @@ namespace MonoMod.Utils
 
         internal static readonly ConstructorInfo c_DebuggableAttribute = typeof(DebuggableAttribute).GetConstructor(new Type[] { typeof(DebuggableAttribute.DebuggingModes) })!;
         internal static readonly ConstructorInfo c_UnverifiableCodeAttribute = typeof(UnverifiableCodeAttribute).GetConstructor(ArrayEx.Empty<Type>())!;
-        internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[] { typeof(string) })!;
+        internal static readonly ConstructorInfo c_IgnoresAccessChecksToAttribute = typeof(IgnoresAccessChecksToAttribute).GetConstructor(new[] { typeof(string) })!;
 
         internal static readonly Type t__IDMDGenerator = typeof(IDMDGenerator);
         internal static readonly ConcurrentDictionary<string, IDMDGenerator> _DMDGeneratorCache = new();
@@ -59,6 +59,22 @@ namespace MonoMod.Utils
         public MethodBase? OriginalMethod { get; }
         public MethodDefinition Definition { get; }
         public ModuleDefinition Module { get; }
+        public bool IsAsync
+        {
+            get => (((MethodImplOptions)Definition.ImplAttributes) & RuntimeAsync.AsyncIl) != 0;
+            set
+            {
+                if (value)
+                {
+                    Helpers.Assert(RuntimeAsync.IsSupported);
+                    Definition.ImplAttributes |= (Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
+                else
+                {
+                    Definition.ImplAttributes &= ~(Mono.Cecil.MethodImplAttributes)RuntimeAsync.AsyncIl;
+                }
+            }
+        }
 
         public string? Name { get; }
 
@@ -209,51 +225,119 @@ namespace MonoMod.Utils
 
         public MethodInfo Generate()
             => Generate(null);
+
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types",
+            Justification = "it's done in a wrapper where we want to try fallbacks if we fail")]
         public MethodInfo Generate(object? context)
         {
             var dmdType = Switches.TryGetSwitchValue(Switches.DMDType, out var swValue) ? swValue as string : null;
+
+            IDMDGenerator? switchSelectedGenerator = null;
 
             if (dmdType is not null)
             {
                 if (dmdType.Equals("dynamicmethod", StringComparison.OrdinalIgnoreCase)
                     || dmdType.Equals("dm", StringComparison.OrdinalIgnoreCase))
                 {
-                    return DMDEmitDynamicMethodGenerator.Generate(this, context);
+                    switchSelectedGenerator = DMDEmitDynamicMethodGenerator.Instance;
                 }
                 if (dmdType.Equals("cecil", StringComparison.OrdinalIgnoreCase)
                     || dmdType.Equals("md", StringComparison.OrdinalIgnoreCase))
                 {
-                    return DMDCecilGenerator.Generate(this, context);
+                    switchSelectedGenerator ??= DMDCecilGenerator.Instance;
                 }
 #if METHODBUILDER_SUPPORTED
                 if (dmdType.Equals("methodbuilder", StringComparison.OrdinalIgnoreCase)
-                    || dmdType.Equals("mb", StringComparison.OrdinalIgnoreCase)) {
-                    return DMDEmitMethodBuilderGenerator.Generate(this, context);
+                    || dmdType.Equals("mb", StringComparison.OrdinalIgnoreCase))
+                {
+                    switchSelectedGenerator ??= DMDEmitMethodBuilderGenerator.Instance;
                 }
 #endif
             }
 
-            if (dmdType is not null)
+            if (switchSelectedGenerator is null && dmdType is not null)
             {
                 var type = ReflectionHelper.GetType(dmdType);
                 if (type != null)
                 {
-                    if (!t__IDMDGenerator.IsCompatible(type))
-                        throw new ArgumentException($"Invalid DMDGenerator type: {dmdType}");
-                    var gen = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator)Activator.CreateInstance(type)!);
-                    return gen.Generate(this, context);
+                    if (!t__IDMDGenerator.IsAssignableFrom(type))
+                    {
+                        MMDbgLog.Error($"Specified DMDGenerator type '{dmdType}' is not a valid generator type!\n" +
+                            $"Use one of the builtin types (`DynamicMethod`, `Cecil`, or `MethodBuilder`) or specify the full name " +
+                            $"of a type derived from MonoMod.Utils.DMDGenerator<T>.");
+                    }
+                    else
+                    {
+                        switchSelectedGenerator = _DMDGeneratorCache.GetOrAdd(dmdType, _ => (IDMDGenerator)Activator.CreateInstance(type)!);
+                    }
                 }
             }
 
+            if (switchSelectedGenerator is not null)
+            {
+                // the user specified a valid generator with the switch
+                if (IsAsync && !switchSelectedGenerator.SupportsAsyncMethods)
+                {
+                    // but the selected generator has not annotated that it works with async methods,
+                    // and this method is async. Therefore, we can't actually use it for that
+                    MMDbgLog.Error($"Specified DMDGenerator type '{dmdType}' ({switchSelectedGenerator.GetType()}) does not advertise support for runtime async methods.");
+                }
+                else
+                {
+                    return switchSelectedGenerator.Generate(this, context);
+                }
+            }
+
+            static bool TryUseGenerator<TGenerator>(DynamicMethodDefinition dmd, object? context,
+                ref bool didTry,
+                [NotNullWhen(true)] out MethodInfo? result)
+                where TGenerator : DMDGenerator<TGenerator>, IDMDGenerator, new()
+            {
+                result = null;
+
+                // if we tried this already, don't try again, because it already didn't work
+                if (didTry)
+                {
+                    return false;
+                }
+                didTry = true;
+
+                var instance = DMDGenerator<TGenerator>.Instance;
+
+                if (dmd.IsAsync && !instance.SupportsAsyncMethods)
+                {
+                    // generator cannot generate this method
+                    return false;
+                }
+
+                result = ((IDMDGenerator)instance).Generate(dmd, context);
+                return true;
+            }
+
+            MethodInfo? result;
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
+            // In some configurations, we never read e.g. didTryMb because it's not supported.
+            bool didTryCecil = false, didTryMb = false, didTryDm = false;
+
             if (_PreferCecil)
-                return DMDCecilGenerator.Generate(this, context);
+            {
+                if (TryUseGenerator<DMDCecilGenerator>(this, context, ref didTryCecil, out result))
+                {
+                    return result;
+                }
+            }
 
             if (Debug)
+            {
 #if !METHODBUILDER_SUPPORTED
-                return DMDCecilGenerator.Generate(this, context);
+                if (TryUseGenerator<DMDCecilGenerator>(this, context, ref didTryCecil, out result))
 #else
-                return DMDEmitMethodBuilderGenerator.Generate(this, context);
+                if (TryUseGenerator<DMDEmitMethodBuilderGenerator>(this, context, ref didTryMb, out result))
 #endif
+                {
+                    return result;
+                }
+            }
 
             // In .NET Framework, DynamicILGenerator doesn't support fault and filter blocks.
             // This is a non-issue in .NET Core, yet it could still be an issue in mono.
@@ -262,10 +346,30 @@ namespace MonoMod.Utils
             if (Definition!.Body.ExceptionHandlers.Any(eh =>
                 eh.HandlerType is ExceptionHandlerType.Fault or ExceptionHandlerType.Filter
             ))
-                return DMDEmitMethodBuilderGenerator.Generate(this, context);
+            {
+                if (TryUseGenerator<DMDEmitMethodBuilderGenerator>(this, context, ref didTryMb, out result))
+                {
+                    return result;
+                }
+            }
 #endif
 
-            return DMDEmitDynamicMethodGenerator.Generate(this, context);
+            // no special overrides, try them
+            if (TryUseGenerator<DMDEmitDynamicMethodGenerator>(this, context, ref didTryDm, out result))
+            {
+                return result;
+            }
+
+#if METHODBUILDER_SUPPORTED
+            if (TryUseGenerator<DMDEmitMethodBuilderGenerator>(this, context, ref didTryMb, out result))
+            {
+                return result;
+            }
+#endif
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
+
+            // if neither of the above worked, the cecil one MUST work
+            return DMDCecilGenerator.Generate(this, context);
         }
 
         public void Dispose()

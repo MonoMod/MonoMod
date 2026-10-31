@@ -43,7 +43,7 @@ namespace MonoMod.SourceGen.Internal.Interop
                     paramsBuilder.Add(GenHelpers.CreateRef(param));
                 }
 
-                methodListBuilder.Add(new(method.Name, GenHelpers.CreateRef(method.ReturnType), paramsBuilder.ToImmutable(), GetAccessibililty(method.DeclaredAccessibility)));
+                methodListBuilder.Add(new(method.Name, GenHelpers.CreateRef(method.ReturnType), paramsBuilder.ToImmutable(), GenHelpers.GetAccessibilityModifier(method.DeclaredAccessibility)));
             }
             return methodListBuilder.ToImmutable();
         }
@@ -83,19 +83,6 @@ namespace MonoMod.SourceGen.Internal.Interop
         }
 
         const string IntPtr = "global::System.IntPtr";
-
-        private static string GetAccessibililty(Accessibility acc)
-            => acc switch
-            {
-                Accessibility.NotApplicable => "",
-                Accessibility.Private => "private ",
-                Accessibility.ProtectedAndInternal => "private protected ",
-                Accessibility.Protected => "protected ",
-                Accessibility.Internal => "internal ",
-                Accessibility.ProtectedOrInternal => "protected internal ",
-                Accessibility.Public => "public ",
-                _ => "/*unknown accessibility*/ ",
-            };
 
         private void GenerateIfaceDecl(SourceProductionContext ctx, FatInterfaceGenInfo info)
         {

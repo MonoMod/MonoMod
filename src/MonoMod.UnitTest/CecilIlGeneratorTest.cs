@@ -68,5 +68,6 @@ namespace MonoMod.UnitTest
             Assert.Equal(bool.TrueString, method.Invoke(null, new object[] { true }));
             Assert.Equal(bool.FalseString, method.Invoke(null, new object[] { false }));
         }
+
     }
 }

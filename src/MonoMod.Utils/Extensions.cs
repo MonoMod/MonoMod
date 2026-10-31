@@ -256,7 +256,7 @@ namespace MonoMod.Utils
             if (method.MetadataToken != 0 ||
                 !method.IsStatic ||
                 !method.IsPublic ||
-                (method.Attributes & System.Reflection.MethodAttributes.ReuseSlot) != System.Reflection.MethodAttributes.ReuseSlot)
+                (method.Attributes & MethodAttributes.ReuseSlot) != MethodAttributes.ReuseSlot)
                 return false;
 
             // Fake DynamicMethods aren't part of their declaring type.

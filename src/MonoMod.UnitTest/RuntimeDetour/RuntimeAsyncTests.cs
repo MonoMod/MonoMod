@@ -1,8 +1,11 @@
-#if NET11_0
 #pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
+
+using Mono.Cecil.Cil;
+using MonoMod.Core.Platforms;
+using MonoMod.Utils;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
@@ -13,23 +16,74 @@ using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest
 {
-    // .NET 11 runtime-async keeps two MethodDescs for a Task/ValueTask method:
-    // the reflected facade and an async-convention variant (coreclr asyncthunks.cpp).
-    // A compiled async call site uses the variant and never enters the facade.
-    // Hooks on the reflected MethodInfo therefore only apply to the Task-returning
-    // stub, and that stub's orig trampoline currently returns a boxed logical T
-    // (or null) instead of a Task — so calling orig() as Task<T> NREs.
-    [Collection("RuntimeDetour")]
-    public class RuntimeAsyncStubTest : TestBase
+    public sealed class SkipIfNoRuntimeAsyncFactAttribute : FactAttribute
     {
-        // ECMA-335 MethodImplAttributes.Async = 0x2000.
-        private const MethodImplAttributes AsyncImpl = (MethodImplAttributes)0x2000;
+        public SkipIfNoRuntimeAsyncFactAttribute()
+        {
+            if (!RuntimeAsync.IsSupported)
+            {
+                Skip = "RuntimeAsync is not supported on the current runtime.";
+            }
 
-        public RuntimeAsyncStubTest(ITestOutputHelper helper) : base(helper)
+            if (PlatformDetection.Runtime is RuntimeKind.CoreCLR
+                && PlatformDetection.RuntimeVersion.Major == 10)
+            {
+                // .NET 10 technically supports runtime async as opt-in, but we don't support that configuration.
+                Skip = "RuntimeAsync is not enabled on the current runtime.";
+            }
+        }
+    }
+
+    [Collection("RuntimeDetour")]
+    public class RuntimeAsyncTests : TestBase
+    {
+        private const MethodImplAttributes AsyncImpl = (MethodImplAttributes)RuntimeAsync.AsyncIl;
+
+        public RuntimeAsyncTests(ITestOutputHelper helper) : base(helper)
         {
         }
 
-        [Fact]
+        public void UtilsRuntimeAsyncMatchesCore()
+        {
+            if (PlatformDetection.Runtime is RuntimeKind.CoreCLR
+                && PlatformDetection.RuntimeVersion.Major == 10)
+            {
+                // .NET 10 technically supports runtime async as opt-in, but we don't support that configuration.
+                return;
+            }
+
+            Assert.True(RuntimeAsync.IsSupported == PlatformTriple.Current.SupportedFeatures.Has(MonoMod.Core.Platforms.RuntimeFeature.HasRuntimeAsync));
+        }
+        private static async Task AsyncMeth()
+        {
+            await Task.Delay(5).ConfigureAwait(false);
+        }
+
+        [SkipIfNoRuntimeAsyncFact]
+        public async Task TestAsyncDmd()
+        {
+            var method = GetMethod(nameof(AsyncMeth));
+            Helpers.Assert(method is not null);
+
+            MethodInfo compiled;
+            using (var dmd = new DynamicMethodDefinition("test async", typeof(Task), []))
+            {
+                dmd.IsAsync = true;
+                var ilp = dmd.GetILProcessor();
+
+                var asyncCall = dmd.Module.ImportReference(method);
+                ilp.Emit(OpCodes.Call, asyncCall);
+                RuntimeAsync.EmitAwait(ilp, asyncCall.ReturnType);
+                ilp.Emit(OpCodes.Ret);
+
+                compiled = dmd.Generate();
+            }
+
+            var result = compiled.Invoke(null, null);
+            await Assert.IsAssignableFrom<Task>(result).ConfigureAwait(false);
+        }
+
+        [SkipIfNoRuntimeAsyncFact]
         public void RuntimeAsyncMethodHasAsyncImplAndIL()
         {
             var method = GetMethod(nameof(CompletedSum));
@@ -45,15 +99,7 @@ namespace MonoMod.UnitTest
             Assert.NotEmpty(il);
         }
 
-        // TODO remove this once we find a way to create runtime-async DMD
         [Fact]
-        public void HookOnRuntimeAsyncMethodThrowsNotSupported()
-        {
-            var method = GetMethod(nameof(CompletedSum));
-            Assert.Throws<ArgumentException>(() => new Hook(method, () => { }));
-        }
-
-        [Fact(Skip = "runtime-async hooks are not supported")]
         public void HookOnRuntimeAsyncFacadeAppliesToReflectedCall()
         {
             var method = GetMethod(nameof(CompletedSum));
@@ -77,8 +123,8 @@ namespace MonoMod.UnitTest
             Assert.Equal(3, Run(call(1, 2)));
         }
 
-        [Fact(Skip = "runtime-async hooks are not supported")]
-        public void CompiledAsyncCallSiteBypassesHookedTaskFacade()
+        [Fact]
+        public void CompiledAsyncCallSiteIsHooked()
         {
             var method = GetMethod(nameof(CompletedSum));
 
@@ -90,28 +136,7 @@ namespace MonoMod.UnitTest
             {
                 var call = method.CreateDelegate<Func<int, int, Task<int>>>();
                 Assert.Equal(13, Run(call(1, 2)));
-                Assert.Equal(3, Run(CallCompletedSumFromAsync(1, 2)));
-            }
-        }
-
-        [Fact(Skip = "runtime-async hooks are not supported")]
-        public void OrigTrampolineOnRuntimeAsyncFacadeThrows()
-        {
-            var method = GetMethod(nameof(CompletedSum));
-            var call = method.CreateDelegate<Func<int, int, Task<int>>>();
-
-            using (new Hook(
-                method,
-                new Func<Func<int, int, Task<int>>, int, int, Task<int>>((orig, a, b) =>
-                {
-                    // orig is typed as Task<int> but the trampoline invokes the async
-                    // variant, which does not produce a Task. Using the result as a Task NREs.
-                    Assert.Throws<NullReferenceException>(() => Run(orig(a, b)));
-                    return Task.FromResult(a + b + 10);
-                })
-            ))
-            {
-                Assert.Equal(13, Run(call(1, 2)));
+                Assert.Equal(13, Run(CallCompletedSumFromAsync(1, 2)));
             }
         }
 
@@ -154,7 +179,6 @@ namespace MonoMod.UnitTest
         private static int Run(Task<int> task) => task.GetAwaiter().GetResult();
 
         private static MethodInfo GetMethod(string name)
-            => typeof(RuntimeAsyncStubTest).GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic)!;
+            => typeof(RuntimeAsyncTests).GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic)!;
     }
 }
-#endif

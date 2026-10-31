@@ -1,15 +1,13 @@
-using Mono.Cecil.Cil;
-using MonoMod.Backports;
 using MonoMod.Core.Utils;
 using MonoMod.Logs;
 using MonoMod.Utils;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace MonoMod.Core.Platforms
 {
@@ -17,7 +15,7 @@ namespace MonoMod.Core.Platforms
     /// A triple of <see cref="IArchitecture"/>, <see cref="ISystem"/>, and <see cref="IRuntime"/> which provides higher-level operations
     /// based on the underlying implementations.
     /// </summary>
-    public sealed class PlatformTriple
+    public sealed partial class PlatformTriple
     {
         /// <summary>
         /// Creates an <see cref="IRuntime"/> implementation using the provided <see cref="ISystem"/> and <see cref="IArchitecture"/> according
@@ -235,7 +233,8 @@ namespace MonoMod.Core.Platforms
         /// for the same method, if possible.
         /// </remarks>
         /// <param name="method">The method to prepare.</param>
-        public void Compile(MethodBase method)
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> for the variant of <paramref name="method"/> to compile.</param>
+        public void Compile(MethodBase method, RuntimeMethodHandle handle = default)
         {
             Helpers.ThrowIfArgumentNull(method);
 
@@ -249,11 +248,14 @@ namespace MonoMod.Core.Platforms
             // if this flag is set, then the runtime implementation is solely responsible for ensuring that the method gets compiled
             if (SupportedFeatures.Has(RuntimeFeature.RequiresCustomMethodCompile))
             {
-                Runtime.Compile(method);
+                Runtime.Compile(method, handle);
             }
             else
             {
-                var handle = Runtime.GetMethodHandle(method);
+                if (handle == default)
+                {
+                    handle = Runtime.GetMethodHandle(method);
+                }
 
                 if (method.IsGenericMethod)
                 {
@@ -351,12 +353,13 @@ namespace MonoMod.Core.Platforms
         /// Tries to disable inlining of the provided method, if the underlying runtime supports it.
         /// </summary>
         /// <param name="method">The method to disable inlining of.</param>
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of the variant of <paramref name="method"/> to disable inlining on.</param>
         /// <returns><see langword="true"/> if inlining could be disabled; <see langword="false"/> otherwise.</returns>
-        public bool TryDisableInlining(MethodBase method)
+        public bool TryDisableInlining(MethodBase method, RuntimeMethodHandle handle = default)
         {
             if (SupportedFeatures.Has(RuntimeFeature.DisableInlining))
             {
-                Runtime.DisableInlining(method);
+                Runtime.DisableInlining(method, handle);
                 return true;
             }
 
@@ -436,9 +439,30 @@ namespace MonoMod.Core.Platforms
         /// <param name="fromRw">The address to write the detour to, if that is different from <paramref name="from"/>. Otherwise, the default value of <see langword="default"/> should be passed.
         /// Refer to <see cref="OnMethodCompiledCallback"/> for more information.</param>
         /// <returns>A <see cref="NativeDetour"/> instance managing the generated detour.</returns>
+        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default)
+        {
+            nint resultSlot = 0;
+            return CreateNativeDetour(from, to, ref resultSlot, detourMaxSize, fromRw);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="NativeDetour"/>. This is basically identical to <see cref="CreateSimpleDetour(IntPtr, IntPtr, int, IntPtr)"/>,
+        /// except that it generates an alternate entrypoint for <paramref name="from"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>This method will always create an alternate entrypoint in <see cref="NativeDetour.AltEntry"/> when <see cref="ArchitectureFeature.CreateAltEntryPoint"/>
+        /// is available. The created alternate entrypoint will be written to <paramref name="altEntryResult"/> BEFORE the detour is applied.</para>
+        /// </remarks>
+        /// <param name="from">The address to detour.</param>
+        /// <param name="to">The target of the detour.</param>
+        /// <param name="altEntryResult">A reference to a location to write the generated alternate entrypoint when it is created.</param>
+        /// <param name="detourMaxSize">The maximum size available for the detour.</param>
+        /// <param name="fromRw">The address to write the detour to, if that is different from <paramref name="from"/>. Otherwise, the default value of <see langword="default"/> should be passed.
+        /// Refer to <see cref="OnMethodCompiledCallback"/> for more information.</param>
+        /// <returns>A <see cref="NativeDetour"/> instance managing the generated detour.</returns>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
-        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, int detourMaxSize = -1, IntPtr fromRw = default)
+        public NativeDetour CreateNativeDetour(IntPtr from, IntPtr to, ref IntPtr altEntryResult, int detourMaxSize = -1, IntPtr fromRw = default)
         {
             if (fromRw == default)
             {
@@ -465,6 +489,7 @@ namespace MonoMod.Core.Platforms
             if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint))
             {
                 altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);
+                Volatile.Write(ref altEntryResult, altEntry);
             }
             else
             {
@@ -485,20 +510,21 @@ namespace MonoMod.Core.Platforms
         /// Gets the native method body for a method.
         /// </summary>
         /// <param name="method">The method to get the body of.</param>
+        /// <param name="handle">The <see cref="RuntimeMethodHandle"/> of the variant of <paramref name="method"/> to get the native body of.</param>
         /// <returns>A pointer to the native method body of the method.</returns>
-        public IntPtr GetNativeMethodBody(MethodBase method)
+        public IntPtr GetNativeMethodBody(MethodBase method, RuntimeMethodHandle handle = default)
         {
             if (SupportedFeatures.Has(RuntimeFeature.RequiresBodyThunkWalking))
             {
-                return GetNativeMethodBodyWalk(method, reloadPtr: true);
+                return GetNativeMethodBodyWalk(method, handle, reloadPtr: true);
             }
             else
             {
-                return GetNativeMethodBodyDirect(method);
+                return GetNativeMethodBodyDirect(method, handle);
             }
         }
 
-        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, bool reloadPtr)
+        private unsafe IntPtr GetNativeMethodBodyWalk(MethodBase method, RuntimeMethodHandle handle, bool reloadPtr)
         {
             var regenerated = false;
             var didPrepareLastIter = false;
@@ -511,7 +537,7 @@ namespace MonoMod.Core.Platforms
             nint prevEntry = -1;
 
             ReloadFuncPtr:
-            var entry = (nint)Runtime.GetMethodEntryPoint(method);
+            var entry = (nint)Runtime.GetMethodEntryPoint(method, handle);
             MMDbgLog.Trace($"Starting entry point = 0x{entry:x16}");
             do
             {
@@ -583,9 +609,9 @@ namespace MonoMod.Core.Platforms
             return entry;
         }
 
-        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method)
+        private unsafe IntPtr GetNativeMethodBodyDirect(MethodBase method, RuntimeMethodHandle handle)
         {
-            return Runtime.GetMethodEntryPoint(method);
+            return Runtime.GetMethodEntryPoint(method, handle);
         }
 
         private IntPtr ThePreStub = IntPtr.Zero;
@@ -605,7 +631,7 @@ namespace MonoMod.Core.Platforms
                 var pre = typeof(System.Net.HttpWebRequest).Assembly
                     .GetType("System.Net.Connection")
                     ?.GetMethods()
-                    .GroupBy(m => GetNativeMethodBodyWalk(m, reloadPtr: false))
+                    .GroupBy(m => GetNativeMethodBodyWalk(m, default, reloadPtr: false))
                     .First(g => g.Count() > 1)
                     .Key ?? (nint)(-1);
 
@@ -616,217 +642,6 @@ namespace MonoMod.Core.Platforms
             wasPreStub = ptrParsed == ThePreStub /*|| ThePreStub == (IntPtr) (-1)*/;
 
             return wasPreStub ? ptrGot : ptrParsed;
-        }
-
-        /// <summary>
-        /// Gets the 'real detour target' when detouring <paramref name="from"/> to <paramref name="to"/>.
-        /// </summary>
-        /// <remarks>
-        /// This will return an ABI fixup method instead of <paramref name="to"/> when needed, automatically
-        /// generating them when needed. When this is needed depends on the argument order in the ABI.
-        /// </remarks>
-        /// <param name="from">The method being detoured from.</param>
-        /// <param name="to">The method being detoured to.</param>
-        /// <returns>The method to detour to instead of <paramref name="to"/>.</returns>
-        public MethodBase GetRealDetourTarget(MethodBase from, MethodBase to)
-        {
-            Helpers.ThrowIfArgumentNull(from);
-            Helpers.ThrowIfArgumentNull(to);
-
-            // TODO: check that `from` and `to` are actually argument- and return-compatible.
-            // When we use this method internally, all the necessary checks are already performed
-            // elsewhere, so we do not need to repeat them here. However, this method is part of
-            // the public API, and currently, it produces faulty results for unsanitized inputs.
-            // So, maybe we should do something about that.
-
-            to = GetIdentifiable(to);
-            if (from is not MethodInfo fromInfo || to is not MethodInfo toInfo)
-                return to;
-
-            var returnBufferIsArgument = false;
-            foreach (var arg in Abi.ArgumentOrder.Span)
-            {
-                if (arg is SpecialArgumentKind.ReturnBuffer)
-                {
-                    returnBufferIsArgument = true;
-                    break;
-                }
-            }
-
-            // Whenever we detour a call from an instance method to a static one, `this` needs to
-            // change its position to morph into a simple argument. Otherwise, it will be swapped
-            // with the return buffer, causing a spectacular failure on the callee side:
-            //
-            // Argument order for the instance method: [ThisPointer,  ReturnBuffer, UserArguments]
-            // Argument order for the static method:   [ReturnBuffer, ThisPointer,  UserArguments]
-            //
-            // Note that this fixup is only relevant when there is a return buffer between `this`
-            // and the user arguments to begin with. Otherwise, both instance and static methods
-            // will have the exact same effective argument order: [ThisPointer, UserArguments].
-            // A return buffer is only present in scenarios where a value is returned by reference.
-            //
-            // Consequently, there is no need for a fixup for ABIs that declare argument order
-            // like this: [ReturnBuffer, ThisPointer, UserArguments] (e.g., Mono on Linux).
-            // While there is no need, there is also no harm in applying it anyways, as it will
-            // act as a simple passthrough.
-            // However, TODO: this scenario can be optimized out of existence.
-            var returnType = fromInfo.ReturnType;
-            var hasReturnBuffer = Abi.Classify(returnType, true) is TypeClassification.ByReference;
-            var hasThis = !fromInfo.IsStatic;
-            var requiresReturnBufferFixup = hasThis && toInfo.IsStatic && hasReturnBuffer && returnBufferIsArgument;
-
-            // Whenever we detour a call from a generic method, depending on the ABI, we may
-            // receive a generic context as an argument, which a callee never needs, at least
-            // in the form of an explicitly passed argument, even if it is also a generic method.
-            // The reason here is simple: we do NOT allow specifying a generic method definition
-            // as a detour target (while that would make sense from a user's perspective, it
-            // requires much more work to function properly), thus, `to` can only be
-            // a constructed generic method with its generic context baked in.
-            // This leads to a pretty bad discrepancy:
-            //
-            // Caller's argument order: [ThisPointer, ReturnBuffer, GenericContext, UserArguments]
-            // Callee's argument order: [ThisPointer, ReturnBuffer, UserArguments]
-            //
-            // Because of this, the callee will receive a pointer to the generic context information
-            // instead of its first argument, causing all subsequent arguments to be shifted by one,
-            // resulting in all types of phantasmagorical problems that will immediately blow up in
-            // the user's face. Moreover, to add insult to injury, there is no way to access
-            // the last argument, although this is the least of our concerns here.
-            //
-            // Note that we only need this fixup if the current ABI explicitly defines the generic
-            // context as an argument. For example, Mono on Windows/Wine x86_64 stores a pointer to
-            // the generic context struct in r10, so generic injections somewhat work there already.
-            //
-            // Consequently, there is no need for a fixup for ABIs that declare `GenericContext`
-            // **after** `UserArguments`. However, as far as I know, this is only relevant for
-            // RyuJITx86, so there is no value in optimizing for that scenario.
-            var requiresGenericContextFixup = HasGenericContext(Abi) && Runtime.RequiresGenericContext(fromInfo);
-
-            // Check if a fixup is needed for the current scenario.
-            if (!requiresReturnBufferFixup && !requiresGenericContextFixup)
-            {
-                // `from` and `to` are considered compatible at this point.
-                // Thus, no ABI fixups are needed, return `to` as is.
-                return to;
-            }
-
-            var returnBufferType = hasReturnBuffer ? returnType.MakeByRefType() : returnType;
-            var newReturnType = hasReturnBuffer && !Abi.ReturnsReturnBuffer ? typeof(void) : returnBufferType;
-
-            var thisPos = -1;
-            var returnBufferPos = -1;
-            var userArgumentsOffset = -1;
-            var parameters = from.GetParameters();
-            var argumentTypes = new List<Type>(parameters.Length + 3);
-            var argumentKinds = Abi.ArgumentOrder.Span;
-            for (var i = 0; i < argumentKinds.Length; i++)
-            {
-                switch (argumentKinds[i])
-                {
-                    case SpecialArgumentKind.ThisPointer when hasThis:
-                        thisPos = argumentTypes.Count;
-                        argumentTypes.Add(from.GetThisParamType());
-                        break;
-
-                    case SpecialArgumentKind.ReturnBuffer when hasReturnBuffer:
-                        returnBufferPos = argumentTypes.Count;
-                        argumentTypes.Add(returnBufferType);
-                        break;
-
-                    case SpecialArgumentKind.GenericContext when requiresGenericContextFixup:
-                        // Currently, we do the bare minimum: we acknowledge that
-                        // the generic context exists. That's all. After that,
-                        // we simply throw it out of the window and rely on
-                        // the generic context (if any) baked into in the callee.
-                        //
-                        // While this does work fine, it introduces funny little
-                        // holes in the type-safety premise of .NET:
-                        //
-                        // // This may return `false`!
-                        // bool Hook<T>(T it)
-                        //     => typeof(T).IsAssignableFrom(it.GetType());
-                        //
-                        // This behavior is caused by the fact that constructed
-                        // generics for reference types are Java'd into a single
-                        // definition at runtime (and rightfully so).
-                        // So, even if you try to detour a specific generic
-                        // implementation using something like
-                        // `to.MakeGenericMethod(typeof(string))`,
-                        // your hook will receive calls for all
-                        // reference type-based implementations out there.
-                        // However, since we do not patch the generic context
-                        // of the provided hook, it remains unchanged,
-                        // causing `typeof(T)` to defy users' expectations.
-                        //
-                        // So, TODO: patch the generic context of the detour target
-                        // and/or introduce a call filter based on the current context.
-
-                        // The generic context is passed as a pointer to a struct that
-                        // contains all the needed (?) information.
-                        // We can treat it as a simple `IntPtr`.
-                        argumentTypes.Add(typeof(nint));
-                        break;
-
-                    case SpecialArgumentKind.UserArguments:
-                        userArgumentsOffset = argumentTypes.Count;
-                        argumentTypes.AddRange(parameters.Select(static p => p.ParameterType));
-                        break;
-                }
-            }
-
-            Helpers.DAssert(thisPos >= 0 || !hasThis);
-            // note: ARM64 (sysv) uses a dedicated register for the return buffer, so we don't record it as an argument
-            Helpers.DAssert(!Abi.ReturnsReturnBuffer || !hasReturnBuffer || returnBufferPos >= 0);
-            Helpers.DAssert(userArgumentsOffset >= 0);
-
-            using var dmd = new DynamicMethodDefinition(
-                DebugFormatter.Format($"Glue:AbiFixup<{from},{to}>"),
-                newReturnType, argumentTypes.ToArray()
-            );
-            // TODO: make DMD apply attributes to the generated DynamicMethod, when possible
-            dmd.Definition!.ImplAttributes |= Mono.Cecil.MethodImplAttributes.NoInlining |
-                (Mono.Cecil.MethodImplAttributes)(int)MethodImplOptionsEx.AggressiveOptimization;
-
-            var il = dmd.GetILProcessor();
-
-            // load return buffer
-            if (hasReturnBuffer && returnBufferPos >= 0)
-                il.Emit(OpCodes.Ldarg, returnBufferPos);
-
-            // load thisptr
-            if (hasThis)
-                il.Emit(OpCodes.Ldarg, thisPos);
-
-            // load user arguments
-            for (var i = 0; i < parameters.Length; i++)
-                il.Emit(OpCodes.Ldarg, i + userArgumentsOffset);
-
-            // call the target method
-            il.Emit(OpCodes.Call, il.Body.Method.Module.ImportReference(to));
-
-            // store the returned object
-            if (hasReturnBuffer && returnBufferPos >= 0)
-                il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(returnType));
-
-            // if we need to return the pointer, do that
-            if (hasReturnBuffer && Abi.ReturnsReturnBuffer)
-                il.Emit(OpCodes.Ldarg, returnBufferPos);
-
-            // then we're done
-            il.Emit(OpCodes.Ret);
-
-            return dmd.Generate();
-        }
-
-        private static bool HasGenericContext(Abi abi)
-        {
-            var arguments = abi.ArgumentOrder.Span;
-            for (var i = 0; i < arguments.Length; i++)
-            {
-                if (arguments[i] is SpecialArgumentKind.GenericContext)
-                    return true;
-            }
-            return false;
         }
     }
 }

@@ -107,6 +107,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             }
 
             var lastInsn = insns[insns.Count - 1];
+#if false
             if (lastInsn.Mnemonic is Mnemonic.Call)
             {
                 // we want to replace trailing calls with a push <ret addr> ; jmp pair, and not add an extra trailing jump
@@ -168,6 +169,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
 
             }
             else
+#endif
             {
                 insns.Add(Instruction.CreateBranch(bitness == 64 ? Code.Jmp_rel32_64 : Code.Jmp_rel32_32, decoder.IP));
             }

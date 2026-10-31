@@ -458,7 +458,8 @@ namespace MonoMod.Core.Utils
 
                 // we didn't match any collections, update the scan base
                 scanBase = offset + 1;
-            } while (true);
+            }
+            while (scanBase < data.Length);
 
             // only after we've fully exhausted the search space do we even bother trying to match the empty patterns
             if (emptyPatterns is not null)
