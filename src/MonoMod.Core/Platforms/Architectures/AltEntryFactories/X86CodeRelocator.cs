@@ -12,7 +12,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
     /// within the block are retargeted to that instruction's new location.</para>
     /// <para>RIP-relative memory operands and XBEGIN have no absolute form; the caller must place the new block within range of their targets.</para>
     /// </remarks>
-    internal static class X86CodeRelocator
+    public static class X86CodeRelocator
     {
         private const int JmpRel32Size = 5;     // E9 rel32
         private const int JmpAbs64Size = 14;    // FF 25 00000000 ; dq target
@@ -25,7 +25,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         /// <summary>
         /// Decodes whole instructions from the start of <paramref name="code"/> until at least <paramref name="minLength"/> bytes are covered.
         /// </summary>
-        /// <param name="code">The code to decode. This must extend at least <see cref="X86InstructionDecoder.MaxInstructionLength"/> bytes past <paramref name="minLength"/>.</param>
+        /// <param name="code">The code to decode. This must extend at least 15 bytes past <paramref name="minLength"/>.</param>
         /// <param name="ip">The address of <paramref name="code"/>.</param>
         /// <param name="is64"><see langword="true"/> to decode 64-bit code, <see langword="false"/> to decode 32-bit code.</param>
         /// <param name="minLength">The minimum number of bytes to decode.</param>

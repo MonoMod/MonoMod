@@ -25,12 +25,13 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         Prefetch,
     }
 
-    internal struct Arm64Instruction
+    /// <summary>An opaque decoded A64 instruction passed between decoding and relocation.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815", Justification = "Opaque transport type for the allocation-free relocation API.")]
+    public struct Arm64Instruction
     {
-        public uint Raw;
-        public Arm64RelocKind Kind;
-        /// <summary>The absolute address referenced by the instruction, for every <see cref="Kind"/> other than <see cref="Arm64RelocKind.None"/>.</summary>
-        public ulong Target;
+        internal uint Raw;
+        internal Arm64RelocKind Kind;
+        internal ulong Target;
 
         // Relocator layout state.
         internal int NewOffset;
@@ -61,17 +62,20 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
     /// <para>Branches use their own encoding while their target is in range, then a direct <c>B</c> (±128MiB), and only then an indirect
     /// branch through <c>x16</c>. Indirect branches clobber <c>x16</c>, and fault on BTI-guarded pages when the target is not a landing
     /// pad, so callers should place the new block within direct-branch range of the original whenever possible.</para>
-    /// <para>Address materialization (<c>ADR</c>, <c>ADRP</c>, literal loads) writes only the instruction's own destination register,
-    /// except for literal loads into SIMD/FP registers, which use <c>x17</c> as the base.</para>
+    /// <para>Address materialization preserves other general-purpose registers on successful completion. Out-of-range SIMD and XZR literal loads use x17 and restore it from a stack spill after the load.</para>
     /// </remarks>
-    internal static class Arm64CodeRelocator
+    public static class Arm64CodeRelocator
     {
         private const uint Nop = 0xD503201F;
         private const uint BranchOpcode = 0x14000000;
         private const uint BrX16 = 0xD61F0200;
         private const uint BlrX16 = 0xD63F0200;
         private const uint LdrLiteralX16 = 0x58000000 | 16;
-        private const int ScratchFp = 17;
+        private const uint SubSp16 = 0xD10043FF;
+        private const uint AddSp16 = 0x910043FF;
+        private const uint StrX17Sp = 0xF90003F1;
+        private const uint LdrX17Sp = 0xF94003F1;
+        private const int ScratchRegister = 17;
 
         private const int BranchAbsoluteSize = 16; // ldr x16, #8 ; br x16 ; .quad target (plus an alignment nop if needed)
         private const int BranchLinkAbsoluteSize = 20; // ldr x16, #12 ; blr x16 ; b #12 ; .quad target (plus an alignment nop if needed)
@@ -157,7 +161,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                     Arm64RelocKind.BranchLink => BranchLinkAbsoluteSize + 4,
                     Arm64RelocKind.ConditionalBranch => 8 + BranchAbsoluteSize + 4,
                     Arm64RelocKind.Adr or Arm64RelocKind.Adrp => 16,
-                    Arm64RelocKind.LoadLiteral => 20,
+                    Arm64RelocKind.LoadLiteral => NeedsScratchForLiteral(insns[i].Raw) ? 36 : 20,
                     _ => 4,
                 };
             }
@@ -269,9 +273,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                     break;
 
                 case Arm64RelocKind.LoadLiteral:
-                    // a load into XZR has no effect other than a possible fault
-                    insn.Form = (insn.Raw & 0x04000000) == 0 && (insn.Raw & 0x1F) == 31 ? Arm64Form.Nop
-                        : FitsBranch(insn.Target, pc, 19) ? Arm64Form.Short
+                    // Keep loads to XZR as memory accesses; they can fault.
+                    insn.Form = FitsBranch(insn.Target, pc, 19) ? Arm64Form.Short
                         : FitsPage(insn.Target, pc) ? Arm64Form.Page
                         : Arm64Form.Absolute;
                     break;
@@ -295,8 +298,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 (Arm64RelocKind.ConditionalBranch, _) => ConditionalHeadSize(insn.Raw) + align + BranchAbsoluteSize,
                 (Arm64RelocKind.Adr, Arm64Form.Page) => 8,
                 (Arm64RelocKind.Adr or Arm64RelocKind.Adrp, _) => 16,
-                (Arm64RelocKind.LoadLiteral, Arm64Form.Page) => 12,
-                (Arm64RelocKind.LoadLiteral, _) => 20,
+                (Arm64RelocKind.LoadLiteral, Arm64Form.Page) => 12 + (NeedsScratchForLiteral(insn.Raw) ? 16 : 0),
+                (Arm64RelocKind.LoadLiteral, _) => 20 + (NeedsScratchForLiteral(insn.Raw) ? 16 : 0),
                 _ => throw new InvalidOperationException($"Invalid form {insn.Form} for {insn.Kind}"),
             };
         }
@@ -375,21 +378,35 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
 
                 case Arm64RelocKind.LoadLiteral:
                 {
-                    var isSimd = (raw & 0x04000000) != 0;
-                    var rb = isSimd ? ScratchFp : rd;
-                    int pos;
+                    var needsScratch = NeedsScratchForLiteral(raw);
+                    var rb = needsScratch ? ScratchRegister : rd;
+                    var pos = 0;
+                    if (needsScratch)
+                    {
+                        Write(dst, pos, SubSp16);
+                        Write(dst, pos + 4, StrX17Sp);
+                        pos += 8;
+                    }
+
                     if (insn.Form == Arm64Form.Page)
                     {
-                        Write(dst, 0, EncodeAdr(rb, (long)((target >> 12) - (pc >> 12)), page: true));
-                        Write(dst, 4, EncodeAddImm(rb, rb, (uint)(target & 0xFFF)));
-                        pos = 8;
+                        Write(dst, pos, EncodeAdr(rb, (long)((target >> 12) - (pc >> 12)), page: true));
+                        Write(dst, pos + 4, EncodeAddImm(rb, rb, (uint)(target & 0xFFF)));
+                        pos += 8;
                     }
                     else
                     {
-                        EmitMovAbsolute(dst, rb, target);
-                        pos = 16;
+                        EmitMovAbsolute(dst.Slice(pos), rb, target);
+                        pos += 16;
                     }
+
                     Write(dst, pos, EncodeLoadFromBase(raw, rb));
+                    pos += 4;
+                    if (needsScratch)
+                    {
+                        Write(dst, pos, LdrX17Sp);
+                        Write(dst, pos + 4, AddSp16);
+                    }
                     return;
                 }
             }
@@ -445,6 +462,8 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             return opcode | ((uint)rb << 5) | rt;
         }
 
+        private static bool NeedsScratchForLiteral(uint raw)
+            => (raw & 0x04000000) != 0 || (raw & 0x1F) == 31;
         private static uint EncodeAddImm(int rd, int rn, uint imm12)
             => 0x91000000u | (imm12 << 10) | ((uint)rn << 5) | (uint)rd;
 

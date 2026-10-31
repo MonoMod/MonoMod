@@ -3,7 +3,8 @@ using System;
 
 namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
 {
-    internal sealed class X86AltEntryFactory : IAltEntryFactory
+    /// <summary>Creates relocated x86/x86-64 alternate entrypoints.</summary>
+    public sealed class X86AltEntryFactory : IAltEntryFactory
     {
         // above these sizes, scratch buffers go on the heap instead of the stack
         private const int MaxStackInstructions = 16;
@@ -13,14 +14,19 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         private readonly IMemoryAllocator alloc;
         private readonly bool is64;
 
+        /// <summary>Creates a factory for the specified system and instruction mode.</summary>
+        /// <param name="system">The system used to allocate and patch executable memory.</param>
+        /// <param name="is64"><see langword="true"/> for x86-64 code; otherwise, x86 code.</param>
         public X86AltEntryFactory(ISystem system, bool is64)
         {
+            Helpers.ThrowIfArgumentNull(system);
             this.system = system;
             this.is64 = is64;
 
             alloc = system.MemoryAllocator;
         }
 
+        /// <inheritdoc/>
         public unsafe IntPtr CreateAlternateEntrypoint(IntPtr entrypoint, int minLength, out IDisposable? handle)
         {
             // IntPtr -> ulong must not sign-extend 32-bit addresses
@@ -35,7 +41,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 : new X86Instruction[minLength];
             insns = insns.Slice(0, X86CodeRelocator.DecodeBlock(code, srcIp, is64, minLength, insns, out var blockLength));
 
-            // RIP-relative operands cannot be rewritten to an absolute form, so the new code must be within reach of the original
+            // RIP-relative operands and XBEGIN have no absolute form; constrain allocation against every target.
             var needsNearAlloc = false;
             for (var i = 0; i < insns.Length; i++)
             {
@@ -49,9 +55,28 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             IAllocatedMemory? allocated;
             if (needsNearAlloc)
             {
+                var low = (nint)entrypoint + int.MinValue;
+                var high = (nint)entrypoint + int.MaxValue;
+                for (var i = 0; i < insns.Length; i++)
+                {
+                    ref readonly var insn = ref insns[i];
+                    if (insn.Kind is not (X86RelocKind.RipRelative or X86RelocKind.RelOperand))
+                        continue;
+
+                    var target = (nint)(nuint)insn.Target;
+                    var operandLow = target - int.MaxValue - insn.Length;
+                    var operandHigh = target - int.MinValue - maxSize;
+                    if (operandLow > low)
+                        low = operandLow;
+                    if (operandHigh < high)
+                        high = operandHigh;
+                }
+
+                if (low > high)
+                    throw new InvalidOperationException("No allocation range can preserve the block's relative operands");
+
                 Helpers.Assert(alloc.TryAllocateInRange(
-                    new(entrypoint, (nint)entrypoint + int.MinValue, (nint)entrypoint + int.MaxValue,
-                    new(maxSize) { Executable = true }), out allocated));
+                    new(entrypoint, low, high, new(maxSize) { Executable = true }), out allocated));
             }
             else
             {

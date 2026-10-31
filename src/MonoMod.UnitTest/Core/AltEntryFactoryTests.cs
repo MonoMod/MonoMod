@@ -6,6 +6,40 @@ using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest.Core
 {
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class Arm64TheoryAttribute : TheoryAttribute
+    {
+        public Arm64TheoryAttribute()
+        {
+            var triple = PlatformTriple.Current;
+            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint) || triple.Architecture.Target != ArchitectureKind.Arm64)
+                Skip = "Requires native ARM64 alternate-entry execution.";
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class X86TheoryAttribute : TheoryAttribute
+    {
+        public X86TheoryAttribute()
+        {
+            var triple = PlatformTriple.Current;
+            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)
+                || triple.Architecture.Target is not (ArchitectureKind.x86 or ArchitectureKind.x86_64))
+                Skip = "Requires native x86/x86-64 alternate-entry execution.";
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class X64TheoryAttribute : TheoryAttribute
+    {
+        public X64TheoryAttribute()
+        {
+            var triple = PlatformTriple.Current;
+            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint) || triple.Architecture.Target != ArchitectureKind.x86_64)
+                Skip = "Requires native x86-64 alternate-entry execution.";
+        }
+    }
+
     public class AltEntryFactoryTests : TestBase
     {
         public AltEntryFactoryTests(ITestOutputHelper helper) : base(helper)
@@ -34,59 +68,123 @@ namespace MonoMod.UnitTest.Core
             return code;
         }
 
-        public static TheoryData<string, byte[], int, int, bool> Functions => new()
+        public static TheoryData<string, byte[], int, int> X86Functions => new()
         {
             {
                 "jcc rel8 leaving the block",
-                // xor eax, eax ; test eax, eax ; je +5 ; mov eax, 1 ; add eax, 42 ; ret
-                X86Code(0, "31C0 85C0 7405 B801000000 052A000000 C3"),
-                6, 42, false
+                X86Code(0,
+                    "31C0 " + // xor eax, eax
+                    "85C0 " + // test eax, eax
+                    "7405 " + // je short +5
+                    "B801000000 " + // mov eax, 1
+                    "052A000000 " + // add eax, 42
+                    "C3"), // ret
+                6, 42
             },
             {
                 "call rel32",
-                // call +0x1B ; add eax, 1 ; ret ; ... ; 0x20: mov eax, 41 ; ret
-                X86Code(0, "E81B000000 83C001 C3", 0x20, "B829000000 C3"),
-                5, 42, false
+                X86Code(0,
+                    "E81B000000 " + // call +0x1B
+                    "83C001 " + // add eax, 1
+                    "C3", // ret
+                    0x20,
+                    "B829000000 " + // mov eax, 41
+                    "C3"), // ret
+                5, 42
             },
             {
                 "jcc rel8 back into the block",
-                // xor eax, eax ; mov cl, 7 ; loop: inc eax ; dec cl ; jne loop ; ret
-                X86Code(0, "31C0 B107 FFC0 FEC9 75FA C3"),
-                10, 7, false
+                X86Code(0,
+                    "31C0 " + // xor eax, eax
+                    "B107 " + // mov cl, 7
+                    "FFC0 " + // inc eax
+                    "FEC9 " + // dec cl
+                    "75FA " + // jne short -6
+                    "C3"), // ret
+                10, 7
             },
             {
                 "loop rel8 back into the block",
-                // mov ecx, 7 ; xor eax, eax ; loop: inc eax ; loop loop ; ret
-                X86Code(0, "B907000000 31C0 FFC0 E2FC C3"),
-                11, 7, false
-            },
-            {
-                "rip-relative load",
-                // mov eax, [rip+0x0A] ; ret ; ... ; 0x10: dd 0x12345678
-                X86Code(0, "8B050A000000 C3", 0x10, "78563412"),
-                6, 0x12345678, true
-            },
-            {
-                "rip-relative operand followed by an immediate",
-                // xor eax, eax ; cmp dword [rip+0x0C], 0x12345678 ; sete al ; ret ; ... ; 0x18: dd 0x12345678
-                X86Code(0, "31C0 813D0C00000078563412 0F94C0 C3", 0x18, "78563412"),
-                12, 1, true
+                X86Code(0,
+                    "B907000000 " + // mov ecx, 7
+                    "31C0 " + // xor eax, eax
+                    "FFC0 " + // inc eax
+                    "E2FC " + // loop short -4
+                    "C3"), // ret
+                11, 7
             },
         };
 
-        [Theory]
-        [MemberData(nameof(Functions))]
-        public void AltEntryExecutesRelocatedX64Prologue(string name, byte[] code, int minLength, int expected, bool x64Only)
+        public static TheoryData<string, byte[], int, int> X64Functions => new()
         {
-            var triple = PlatformTriple.Current;
-            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint)
-                || triple.Architecture.Target is not (ArchitectureKind.x86 or ArchitectureKind.x86_64)
-                || (x64Only && triple.Architecture.Target != ArchitectureKind.x86_64))
             {
-                return;
-            }
+                "rip-relative load",
+                X86Code(0,
+                    "8B050A000000 " + // mov eax, [rip + 0x0A]
+                    "C3", // ret
+                    0x10,
+                    "78563412"), // dd 0x12345678
+                6, 0x12345678
+            },
+            {
+                "rip-relative operand followed by an immediate",
+                X86Code(0,
+                    "31C0 " + // xor eax, eax
+                    "813D0C00000078563412 " + // cmp dword [rip + 0x0C], 0x12345678
+                    "0F94C0 " + // sete al
+                    "C3", // ret
+                    0x18,
+                    "78563412"), // dd 0x12345678
+                12, 1
+            },
+            {
+                "frame-pointer stack prologue",
+                X86Code(0,
+                    "55 " + // push rbp
+                    "4889E5 " + // mov rbp, rsp
+                    "4883EC10 " + // sub rsp, 0x10
+                    "B82A000000 " + // mov eax, 42
+                    "C9 " + // leave
+                    "C3"), // ret
+                8, 42
+            },
+            {
+                "rip-relative load and internal conditional branch (taken)",
+                X86Code(0,
+                    "8B050A000000 " + // mov eax, [rip + 0x0A]
+                    "85C0 " + // test eax, eax
+                    "7403 " + // je short +3 to the ret
+                    "83C001 " + // add eax, 1
+                    "C3", // ret
+                    0x10,
+                    "00000000"), // dd 0
+                14, 0
+            },
+            {
+                "rip-relative load and internal conditional branch (not taken)",
+                X86Code(0,
+                    "8B050A000000 " + // mov eax, [rip + 0x0A]
+                    "85C0 " + // test eax, eax
+                    "7403 " + // je short +3 to the ret
+                    "83C001 " + // add eax, 1
+                    "C3", // ret
+                    0x10,
+                    "29000000"), // dd 41
+                14, 42
+            },
+        };
 
-            // ret
+        [X86Theory]
+        [MemberData(nameof(X86Functions))]
+        public void AltEntryExecutesRelocatedX86Prologue(string name, byte[] code, int minLength, int expected)
+        {
+            AssertAltEntryBehavesLikeOriginal(name, code, minLength, [0xC3], _ => expected);
+        }
+
+        [X64Theory]
+        [MemberData(nameof(X64Functions))]
+        public void AltEntryExecutesRelocatedX64Prologue(string name, byte[] code, int minLength, int expected)
+        {
             AssertAltEntryBehavesLikeOriginal(name, code, minLength, [0xC3], _ => expected);
         }
 
@@ -155,15 +253,10 @@ namespace MonoMod.UnitTest.Core
             },
         };
 
-        [Theory]
+        [Arm64Theory]
         [MemberData(nameof(Arm64Functions))]
         public void AltEntryExecutesRelocatedArm64Prologue(string name, byte[] code, int minLength, int expected, bool returnsPageOffset)
         {
-            var triple = PlatformTriple.Current;
-            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint) || triple.Architecture.Target != ArchitectureKind.Arm64)
-            {
-                return;
-            }
 
             // ret
             AssertAltEntryBehavesLikeOriginal(name, code, minLength, [0xC0, 0x03, 0x5F, 0xD6],
@@ -201,27 +294,41 @@ namespace MonoMod.UnitTest.Core
         // RIP-relative displacements are 0x100; dispOffset locates them, or is -1 if there are none.
         public static TheoryData<string, string, int> ApxPrologues => new()
         {
-            // push2 %r12, %r13 ; pushp %rbx ; pushp %r16
-            { "push2/pushp", "62D41418FFF4 D50853 D51850", -1 },
-            // imulq $0x12345678, 0x100(%rip), %r17 (REX2)
-            { "REX2 rip-relative with imm32", "D548690D0001000078563412", 4 },
-            // {nf} imulq $0x12345678, 0x100(%rip), %rbx (EVEX map 4)
-            { "EVEX map 4 rip-relative with imm32", "62F4FC0C691D0001000078563412", 6 },
-            // addw $0x1234, 0x100(%rip), %r16w (EVEX map 4 NDD, 16-bit operand size from EVEX.pp)
-            { "EVEX map 4 rip-relative with imm16", "62F47D10810500010000 3412", 6 },
-            // jmpabs $0x1122334455667788
-            { "jmpabs", "D500A18877665544332211", -1 },
+            {
+                "push2/pushp",
+                "62D41418FFF4 " + // push2 %r12, %r13
+                "D50853 " + // pushp %rbx
+                "D51850", // pushp %r16
+                -1
+            },
+            {
+                "REX2 rip-relative with imm32",
+                "D548690D0001000078563412", // imulq $0x12345678, 0x100(%rip), %r17
+                4
+            },
+            {
+                "EVEX map 4 rip-relative with imm32",
+                "62F4FC0C691D0001000078563412", // {nf} imulq $0x12345678, 0x100(%rip), %rbx
+                6
+            },
+            {
+                "EVEX map 4 rip-relative with imm16",
+                "62F47D10810500010000 " + // addw $0x1234, 0x100(%rip), %r16w; opcode and ModRM/displacement
+                "3412", // imm16
+                6
+            },
+            {
+                "jmpabs",
+                "D500A18877665544332211", // jmpabs $0x1122334455667788
+                -1
+            },
         };
 
-        [Theory]
+        [X64Theory]
         [MemberData(nameof(ApxPrologues))]
         public unsafe void AltEntryRelocatesApxPrologue(string name, string hex, int dispOffset)
         {
             var triple = PlatformTriple.Current;
-            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint) || triple.Architecture.Target != ArchitectureKind.x86_64)
-            {
-                return;
-            }
 
             var code = X86Code(0, hex);
             var length = 0;

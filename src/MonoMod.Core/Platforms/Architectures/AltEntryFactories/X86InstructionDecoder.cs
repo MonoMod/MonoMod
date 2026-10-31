@@ -23,9 +23,11 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         CounterBranch,
     }
 
+    /// <summary>Flags for operand- and address-size prefixes relevant to relocation.</summary>
     [Flags]
     internal enum X86InstructionFlags : byte
     {
+        /// <summary>No instruction prefix affects operand or address size.</summary>
         None = 0,
         /// <summary>The operand size is 16 bits (66 prefix without REX.W). Relative operands are 16 bits wide and truncate the instruction pointer.</summary>
         OperandSize16 = 1 << 0,
@@ -33,19 +35,24 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
         AddressSizePrefix = 1 << 1,
     }
 
-    internal struct X86Instruction
+    /// <summary>An opaque decoded x86 instruction passed between block decoding and relocation.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1815", Justification = "Opaque transport type for the allocation-free relocation API.")]
+    public struct X86Instruction
     {
         /// <summary>The offset of the instruction from the start of the decoded block.</summary>
-        public int Offset;
-        public int Length;
-        public X86RelocKind Kind;
-        public X86InstructionFlags Flags;
+        internal int Offset;
+        /// <summary>The instruction length in bytes.</summary>
+        internal int Length;
+        /// <summary>The instruction's relocation behavior.</summary>
+        internal X86RelocKind Kind;
+        /// <summary>Prefixes affecting operand and address size.</summary>
+        internal X86InstructionFlags Flags;
         /// <summary>The condition code for <see cref="X86RelocKind.Jcc"/>, or the opcode byte for <see cref="X86RelocKind.CounterBranch"/>.</summary>
-        public byte Opcode;
+        internal byte Opcode;
         /// <summary>The offset of the 32-bit displacement within the instruction for <see cref="X86RelocKind.RipRelative"/> and <see cref="X86RelocKind.RelOperand"/>.</summary>
-        public byte RelOffset;
+        internal byte RelOffset;
         /// <summary>The absolute address referenced by the instruction, for every <see cref="Kind"/> other than <see cref="X86RelocKind.None"/>.</summary>
-        public ulong Target;
+        internal ulong Target;
 
         // Relocator layout state.
         internal int NewOffset;
@@ -58,6 +65,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
     /// </summary>
     internal static class X86InstructionDecoder
     {
+        /// <summary>The maximum architectural x86 instruction length, in bytes.</summary>
         public const int MaxInstructionLength = 15;
 
         [Flags]
