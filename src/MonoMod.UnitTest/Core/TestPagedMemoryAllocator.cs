@@ -20,7 +20,8 @@ namespace MonoMod.UnitTest.Core
             {
             }
 
-            private nint addr;
+            private nint addr = 0x10000;
+            public int PositionedPageAllocations { get; private set; }
 
             protected override bool TryAllocateNewPage(AllocationRequest request, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
             {
@@ -35,6 +36,7 @@ namespace MonoMod.UnitTest.Core
             protected override bool TryAllocateNewPage(PositionedAllocationRequest request, nint targetPage, nint lowPageBound, nint highPageBound, [MaybeNullWhen(false)] out IAllocatedMemory allocated)
             {
                 // each alloc will create a new "page", because we only *really* care about testing the page-list for now
+                PositionedPageAllocations++;
                 var page = new Page(this, (nint)targetPage, (uint)PageSize, request.Base.Executable);
                 InsertAllocatedPage(page);
                 var result = page.TryAllocate((uint)request.Base.Size, (uint)request.Base.Alignment, out var pageAlloc);
@@ -90,6 +92,25 @@ namespace MonoMod.UnitTest.Core
             foreach (var it in list)
             {
                 it.Dispose();
+            }
+        }
+
+        [Fact]
+        public void TryAllocateInRangeReusesFirstPage()
+        {
+            var allocator = new DummyMemoryAllocator();
+            Assert.True(allocator.TryAllocate(new(16), out var source));
+            using (source)
+            {
+                nint target = source.BaseAddress;
+                var request = new PositionedAllocationRequest(target, target - 0x1000, target + 0x1000, new(16));
+                Assert.True(allocator.TryAllocateInRange(request, out var near));
+                using (near)
+                {
+                    Assert.Equal(target + 16, (nint)near.BaseAddress);
+                }
+
+                Assert.Equal(0, allocator.PositionedPageAllocations);
             }
         }
 
