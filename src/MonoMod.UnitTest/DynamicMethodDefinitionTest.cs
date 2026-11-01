@@ -14,6 +14,7 @@ using System.Reflection.Emit;
 using Xunit;
 using Xunit.Abstractions;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
+using ReflOpCodes = System.Reflection.Emit.OpCodes;
 
 namespace MonoMod.UnitTest
 {
@@ -382,5 +383,76 @@ namespace MonoMod.UnitTest
             return value + 41;
         }
 #endif
+
+        private static DynamicMethod AddOneDM()
+        {
+            var dm = new DynamicMethod("AddOne", typeof(int), [typeof(int)], typeof(DynamicMethodDefinitionTest), true);
+            var il = dm.GetILGenerator();
+            il.Emit(ReflOpCodes.Ldarg_0);
+            il.Emit(ReflOpCodes.Ldc_I4_1);
+            il.Emit(ReflOpCodes.Add);
+            il.Emit(ReflOpCodes.Ret);
+            il.Emit(ReflOpCodes.Ldc_I4_1);
+            il.Emit(ReflOpCodes.Add);
+            il.Emit(ReflOpCodes.Ret);
+            return dm;
+        }
+
+        [Fact]
+        public void CallDynamicMethodWithSpanParameter()
+        {
+            var dm = new DynamicMethod("SpanLength", typeof(int), [typeof(Span<int>)], typeof(DynamicMethodDefinitionTest), true);
+            var dmil = dm.GetILGenerator();
+            dmil.Emit(ReflOpCodes.Ldc_I4_7);
+            dmil.Emit(ReflOpCodes.Ret);
+
+            using var dmd = new DynamicMethodDefinition("CallSpanLength", typeof(int), []);
+            var span = new Mono.Cecil.Cil.VariableDefinition(dmd.Module.ImportReference(typeof(Span<int>)));
+            dmd.Definition.Body.Variables.Add(span);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldloca, span);
+            il.Emit(OpCodes.Initobj, dmd.Module.ImportReference(typeof(Span<int>)));
+            il.Emit(OpCodes.Ldloc, span);
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(dm));
+            il.Emit(OpCodes.Ret);
+
+            Assert.Equal(7, DMDCecilGenerator.Generate(dmd).Invoke(null, null));
+        }
+
+#if NETFRAMEWORK || NET9_0_OR_GREATER
+        [Fact]
+        public void MethodBuilderGeneratorCallsDynamicMethod()
+        {
+            using var dmd = new DynamicMethodDefinition("CallAddOne", typeof(int), [typeof(int)]);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(AddOneDM()));
+            il.Emit(OpCodes.Ret);
+
+            Assert.Equal(42, DMDEmitMethodBuilderGenerator.Generate(dmd).Invoke(null, [41]));
+        }
+#endif
+
+        [Fact]
+        public void CecilGeneratorCallsDynamicMethodAtBranchTarget()
+        {
+            // int CallAddOne(int x) => AddOne(x != 0 ? 41 : 9);
+            using var dmd = new DynamicMethodDefinition("CallAddOne", typeof(int), [typeof(int)]);
+            var il = dmd.GetILProcessor();
+            var call = il.Create(OpCodes.Call, dmd.Module.ImportReference(AddOneDM()));
+            var isTrue = il.Create(OpCodes.Ldc_I4, 41);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Brtrue, isTrue);
+            il.Emit(OpCodes.Ldc_I4, 9);
+            il.Emit(OpCodes.Br, call);
+            il.Append(isTrue);
+            il.Append(call);
+            il.Emit(OpCodes.Ret);
+            var method = DMDCecilGenerator.Generate(dmd);
+
+            Assert.Equal(42, method.Invoke(null, [1]));
+            Assert.Equal(10, method.Invoke(null, [0]));
+        }
+
     }
 }

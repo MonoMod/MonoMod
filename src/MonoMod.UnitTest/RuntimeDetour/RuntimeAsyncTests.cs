@@ -4,6 +4,7 @@
 extern alias New;
 
 using Mono.Cecil.Cil;
+using MonoMod.Core;
 using MonoMod.Core.Platforms;
 using MonoMod.Utils;
 using New::MonoMod.RuntimeDetour;
@@ -180,5 +181,35 @@ namespace MonoMod.UnitTest
 
         private static MethodInfo GetMethod(string name)
             => typeof(RuntimeAsyncTests).GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic)!;
+
+        private static int asyncNoResultCalls;
+        private static int asyncTaskIntCalls;
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static async Task AsyncNoResult()
+        {
+            asyncNoResultCalls++;
+            await Task.Yield();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Task<int> TaskIntTarget()
+        {
+            asyncTaskIntCalls++;
+            return Task.FromResult(42);
+        }
+
+        [Fact]
+        public async Task CovariantTaskReturnsAreSupported()
+        {
+            using (DetourFactory.Current.CreateDetour(GetMethod(nameof(AsyncNoResult)), GetMethod(nameof(TaskIntTarget))))
+            {
+                asyncNoResultCalls = 0;
+                asyncTaskIntCalls = 0;
+                await AsyncNoResult();
+                Assert.Equal(0, asyncNoResultCalls);
+                Assert.Equal(1, asyncTaskIntCalls);
+            }
+        }
     }
 }
