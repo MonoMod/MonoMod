@@ -54,6 +54,13 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             var md = (V110.MethodDesc*)handle.Value;
 
+            if (md->HasMethodInstantiation())
+            {
+                // this method is a generic instantiation. We don't have proper support for this yet,
+                // the generic paths being stubbed out in our interop logic.
+                throw new NotSupportedException($"The method {method} is generic.");
+            }
+
             md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
 
             var ptr = (nint)md->GetNativeCode();
@@ -134,6 +141,13 @@ namespace MonoMod.Core.Platforms.Runtimes
                 return false;
             }
 
+            if (mdesc->HasMethodInstantiation())
+            {
+                // this method is a generic instantiation. We don't have proper support for this yet,
+                // the generic paths being stubbed out in our interop logic.
+                throw new NotSupportedException($"The method {method} is generic.");
+            }
+
             var ordinary = mdesc->GetOrdinaryVariantNoCreate();
             var async = mdesc->GetAsyncVariantNoCreate();
 
@@ -141,12 +155,12 @@ namespace MonoMod.Core.Platforms.Runtimes
             {
                 // if the normal variant reports IsAsyncThunkMethod(), then it really is a thunk that calls into the async variant
                 NormalVariantFlags = ordinary != null && ordinary->IsAsyncThunkMethod() ? RuntimeAsyncVariantFlags.IsThunk : 0,
-                NormalVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)ordinary),
+                NormalVariant = ordinary is null ? default : JitHookHelpers.CreateHandleForHandlePointer((IntPtr)ordinary),
 
                 // if the async variant reports IsAsyngThunkMethod(), it's not *really* a thunk because it is compiled by the jit
                 // using the same IL as the ordinary variant. This is marked by SupportsAsyncVersionCodegen().
                 AsyncVariantFlags = async != null && async->IsAsyncThunkMethod() && !async->SupportsAsyncVersionCodegen() ? RuntimeAsyncVariantFlags.IsThunk : 0,
-                AsyncVariant = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)async),
+                AsyncVariant = async is null ? default : JitHookHelpers.CreateHandleForHandlePointer((IntPtr)async),
             };
 
             GC.KeepAlive(method);
