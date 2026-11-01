@@ -129,7 +129,7 @@ namespace MonoMod.Core.Platforms
             // if we have a retbuf, store that
             if (dstAbi.ReturnBufferArgument >= 0)
             {
-                il.Emit(OpCodes.Stobj, mr.ReturnType);
+                il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(dst is MethodInfo mi ? mi.ReturnType : typeof(void)));
             }
 
             // if we're support to return the retbuf, do so
