@@ -520,7 +520,9 @@ namespace MonoMod.Core.Platforms
 
                 method = Triple.GetIdentifiable(method);
 
-                if (method != SrcMethod || handle != SrcMethodHandle)
+                // We DON'T check SrcMethodHandle here, because on many runtimes, we can't act ually guarantee that the handle we get
+                // for a method is the handle that gets compiled, so we're forced to assume that the method handle we get is correct.
+                if (method != SrcMethod /*|| handle != SrcMethodHandle*/)
                 {
                     return;
                 }
@@ -699,8 +701,6 @@ namespace MonoMod.Core.Platforms
                     AllocHandles.Add(dstPin);
                 }
 
-                Detours.Add(Triple.CreateSimpleDetour(normalFrom, normalTo));
-
                 // then we *also* need to generate and detour the async variant
                 var (realTarget, realHandle) = BuildNewAsyncVariantTarget(out var realTargetSlot);
                 Triple.Compile(SrcMethod, SrcAsyncInfo.AsyncVariant);
@@ -709,6 +709,10 @@ namespace MonoMod.Core.Platforms
                 Triple.Compile(realTarget, realHandle);
                 var asyncTo = realHandle.GetFunctionPointer();
 
+                // NOTE: we generate the variants BEFORE applying the detours to avoid half-applied detours if creating
+                // the async target fails for any reason
+
+                Detours.Add(Triple.CreateSimpleDetour(normalFrom, normalTo));
                 var newDetour = Triple.CreateNativeDetour(asyncFrom, asyncTo, ref *realTargetSlot);
                 if (newDetour.AltHandle is not null)
                 {
@@ -754,14 +758,7 @@ namespace MonoMod.Core.Platforms
 
                     try
                     {
-                        if (handle == SrcAsyncInfo.NormalVariant)
-                        {
-                            // recompiling the normal variant
-                            var to = NormalRealDstHandle.GetFunctionPointer();
-                            var newDetour = Triple.CreateSimpleDetour(codeStart, to, detourMaxSize: (int)codeSize, fromRw: codeRw);
-                            Detours.Add(newDetour);
-                        }
-                        else if (handle == SrcAsyncInfo.AsyncVariant)
+                        if (handle == SrcAsyncInfo.AsyncVariant)
                         {
                             // recompiling the async variant
                             // we need to generate a NEW real target to detour to, since runtime async continuations are not code-version compatible by default
@@ -774,6 +771,16 @@ namespace MonoMod.Core.Platforms
                                 AllocHandles.Add(newDetour.AltHandle);
                             }
                             Detours.Add(newDetour.Simple);
+                        }
+                        // See the comment above in the callback for OrdinaryManagedDetourBox.
+                        // Here at least we CAN guarantee that we get the async variant correctly, (and *in practice* we also have the ordinary variant
+                        // too, but...) so if we recieve a callback for a variant that ISN'T the async variant, we assume it is the ordinary variant.
+                        else //if (handle == SrcAsyncInfo.NormalVariant)
+                        {
+                            // recompiling the normal variant
+                            var to = NormalRealDstHandle.GetFunctionPointer();
+                            var newDetour = Triple.CreateSimpleDetour(codeStart, to, detourMaxSize: (int)codeSize, fromRw: codeRw);
+                            Detours.Add(newDetour);
                         }
                     }
                     catch (Exception e)
