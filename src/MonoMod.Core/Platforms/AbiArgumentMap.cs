@@ -379,7 +379,7 @@ namespace MonoMod.Core.Platforms
 
             if (!sourceAbi.AbiReturn.IsCompatible(targetAbi.AbiReturn))
             {
-                result |= AbiArgumentMapResult.ArgumentTypesIncompatible;
+                result |= AbiArgumentMapResult.ReturnTypesIncompatible;
             }
 
             // a mapping is considered valid if:
@@ -439,6 +439,10 @@ namespace MonoMod.Core.Platforms
         /// At least one mapped argument has incompatible types between the source and target.
         /// </summary>
         ArgumentTypesIncompatible = 1 << 6,
+        /// <summary>
+        /// The return types are not compatible between the source and target.
+        /// </summary>
+        ReturnTypesIncompatible = 1 << 7,
     }
 
     /// <summary>
@@ -454,9 +458,10 @@ namespace MonoMod.Core.Platforms
         /// automatically.</para>
         /// </remarks>
         /// <param name="result">The <see cref="AbiArgumentMapResult"/> to check.</param>
+        /// <param name="allowIncompatibleReturnTypes"><see langword="true"/> to allow incompatible return types; <see langword="false"/> to them as invalid.</param>
         /// <exception cref="InvalidOperationException">Thrown if <paramref name="result"/> does not have
         /// <see cref="AbiArgumentMapResult.MappingIsValid"/> set with an informative message.</exception>
-        public static void ThrowIfInvalid(this AbiArgumentMapResult result)
+        public static void ThrowIfInvalid(this AbiArgumentMapResult result, bool allowIncompatibleReturnTypes = false)
         {
             if (!result.Has(AbiArgumentMapResult.MappingIsValid))
             {
@@ -469,6 +474,10 @@ namespace MonoMod.Core.Platforms
                     throw new InvalidOperationException("Target would have unset arguments");
                 }
                 throw new InvalidOperationException("Could not compute a valid mapping");
+            }
+            if (!allowIncompatibleReturnTypes && result.Has(AbiArgumentMapResult.ReturnTypesIncompatible))
+            {
+                throw new InvalidOperationException("Return types are incompatible");
             }
         }
     }

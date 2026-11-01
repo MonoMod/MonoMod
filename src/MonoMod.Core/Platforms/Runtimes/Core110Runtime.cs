@@ -208,10 +208,37 @@ namespace MonoMod.Core.Platforms.Runtimes
             // compute the main mapping and compatibility
             var toMap = new int[toAbi.Arguments.Length];
             var mapResult = argumentMap.MapArguments(fromAbi, toAbi, toMap);
-            mapResult.ThrowIfInvalid();
-            // TODO: warn for uunmapped source args..?
+            mapResult.ThrowIfInvalid(allowIncompatibleReturnTypes: true); // note: we check separately for incompatible return types, because we treat them specially
+            // TODO: warn for unmapped source args..?
 
             Helpers.Assert(fromAbi.AsyncContinuationArgument >= 0);
+
+            [DoesNotReturn]
+            static void ThrowIncompatibleReturnTypes(Type from, Type to)
+                => throw new NotSupportedException($"Target logical return type {to} is incompatible with source logical return type {from}");
+
+            var dropReturn = false;
+            if (fromAbi.AbiReturnIsReturnBuffer)
+            {
+                Helpers.Assert(toAbi.AbiReturnIsReturnBuffer);
+                if (!fromAbi.AbiReturn.IsCompatible(toAbi.AbiReturn))
+                {
+                    ThrowIncompatibleReturnTypes(fromAbi.AbiReturn, toAbi.AbiReturn);
+                }
+            }
+            else
+            {
+                if (fromAbi.AbiReturn == typeof(void))
+                {
+                    // from returns void in-abi, so we need to drop the target return value
+                    dropReturn = true;
+                }
+                // otherwise do the normal return-type compatibility check
+                else if (!fromAbi.AbiReturn.IsCompatible(toAbi.AbiReturn))
+                {
+                    ThrowIncompatibleReturnTypes(fromAbi.AbiReturn, toAbi.AbiReturn);
+                }
+            }
 
             // we know that we have something compatible now, now to do more work...
             var toTarget = GetMethodStableEntrypoint(args.To, args.ToVariant);
@@ -279,8 +306,12 @@ namespace MonoMod.Core.Platforms.Runtimes
                 il.Emit(OpCodes.Ldc_I8, (long)(ulong)toTarget);
             }
 
+            // note: all CoreCLR ABIs treat the return register as caller-preserve unconditionally.
+            // It is therefore safe for us to simply call the target as `void`-returning
             il.Emit(OpCodes.Tailcall);
-            il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, toAbi.AbiReturn, toArgTypes, null);
+            il.EmitCalli(OpCodes.Calli, CallingConventions.Standard, 
+                dropReturn ? typeof(void) : toAbi.AbiReturn,
+                toArgTypes, null);
             il.Emit(OpCodes.Ret);
 
             // our ABI fixup is done. 
