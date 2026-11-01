@@ -10,6 +10,8 @@ using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
 using CecilMethodAttributes = Mono.Cecil.MethodAttributes;
 using CecilMethodImplAttributes = Mono.Cecil.MethodImplAttributes;
 using CecilTypeAttributes = Mono.Cecil.TypeAttributes;
+using System.Runtime.CompilerServices;
+
 
 #if NET9_0_OR_GREATER
 using System.Threading;
@@ -370,56 +372,71 @@ namespace MonoMod.Utils.DMDGenerators
             return (typeDef, invokeInv);
         }
 
+        private static readonly ConcurrentDictionary<DelegateTypeCacheKey, (object Lock, StrongBox<(DelegateTypeResult, bool)?> ResultBox)> delegateCreateSyncDict = new();
+
         private static (DelegateTypeResult DelegateType, bool ReturnLast) CreateDelegateType(DelegateTypeCacheKey key)
         {
-            if (!key.HasByRefLikes)
-            {
-                // we can use our fast invokers if only the first parameter is a byref
-                if (!key.HasByRefs || !key.HasNonFirstByRefs)
-                {
-                    if (key.NumParams == 0)
-                    {
-                        // no parameters, can just use Action/Func + their invoke methods
-                        var result = key.ReturnsVoid ? typeof(Action) : typeof(Func<>);
-                        return (new(result, null), true);
-                    }
+            // we want to synchronize creation to avoid double-creating big fat assemblies
+            var (@lock, resultBox) = delegateCreateSyncDict.GetOrAdd(key, _ => (new(), new(default)));
 
-                    if (key.NumParams <= FastDelegateInvokers.MaxFastInvokerParams)
+            lock (@lock)
+            {
+                if (resultBox.Value is { } resultTuple)
+                {
+                    return resultTuple;
+                }
+
+                if (!key.HasByRefLikes)
+                {
+                    // we can use our fast invokers if only the first parameter is a byref
+                    if (!key.HasByRefs || !key.HasNonFirstByRefs)
                     {
-                        // we can use our pregenerated FastDelegateInvokers
-                        var index = FastDelegateInvokers.EncodeIndex(!key.ReturnsVoid, key.HasByRefs, key.NumParams);
-                        if (index < FastDelegateInvokers.Invokers.Length)
+                        if (key.NumParams == 0)
                         {
-                            var (invoker, del) = FastDelegateInvokers.Invokers[index];
-                            return (new(del, invoker), false);
+                            // no parameters, can just use Action/Func + their invoke methods
+                            var result = key.ReturnsVoid ? typeof(Action) : typeof(Func<>);
+                            return (new(result, null), true);
+                        }
+
+                        if (key.NumParams <= FastDelegateInvokers.MaxFastInvokerParams)
+                        {
+                            // we can use our pregenerated FastDelegateInvokers
+                            var index = FastDelegateInvokers.EncodeIndex(!key.ReturnsVoid, key.HasByRefs, key.NumParams);
+                            if (index < FastDelegateInvokers.Invokers.Length)
+                            {
+                                var (invoker, del) = FastDelegateInvokers.Invokers[index];
+                                return (new(del, invoker), false);
+                            }
                         }
                     }
                 }
-            }
 
-            // otherwise, we need to synthesize it
-            DelegateTypeResult resultType;
+                // otherwise, we need to synthesize it
+                DelegateTypeResult resultType;
 
 #pragma warning disable CA1031 // Do not catch general exception types
-            // If we support MethodBuilder, if it throws, we want to fall back to creating with Cecil.
-            // If Cecil succeeds, we're OK swallowing the exception. If it fails, it'll throw, and we'll
-            // have gotten an exception in the log anyway.
+                // If we support MethodBuilder, if it throws, we want to fall back to creating with Cecil.
+                // If Cecil succeeds, we're OK swallowing the exception. If it fails, it'll throw, and we'll
+                // have gotten an exception in the log anyway.
 #if NET9_0_OR_GREATER
-            try
-            {
-                resultType = CreateDelegateTypeWithDynAssembly(key);
-            }
-            catch (Exception e)
-            {
-                MMDbgLog.Error($"Creation of delegate type {key} with dynamic assembly failed: {e}");
+                try
+                {
+                    resultType = CreateDelegateTypeWithDynAssembly(key);
+                }
+                catch (Exception e)
+                {
+                    MMDbgLog.Error($"Creation of delegate type {key} with dynamic assembly failed: {e}");
 #else
-            {
+                {
 #endif
-                resultType = CreateDelegateTypeWithCecil(key);
-            }
+                    resultType = CreateDelegateTypeWithCecil(key);
+                }
 #pragma warning restore CA1031 // Do not catch general exception types
 
-            return (resultType, false);
+                resultBox.Value = (resultType, false);
+            }
+
+            return resultBox.Value.Value;
         }
 
         private static string SanitizeTypeName(string name)
@@ -469,7 +486,7 @@ namespace MonoMod.Utils.DMDGenerators
 
                 dynamicModule ??= dynamicAssembly.DefineDynamicModule(dynamicAssembly.FullName ?? "???");
 
-                var typeName = SanitizeTypeName(key.ToString());
+                var typeName = SanitizeTypeName(key.ToString() + $"[{Guid.NewGuid()}]");
 
                 var type = dynamicModule.DefineType(typeName,
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class,
@@ -482,7 +499,7 @@ namespace MonoMod.Utils.DMDGenerators
                 ctor.SetImplementationFlags(System.Reflection.MethodImplAttributes.Managed | System.Reflection.MethodImplAttributes.Runtime);
 
                 var genericParamNames = Enumerable.Range(0, key.NumGenericParams).Select(i => i.ToString(null, null)).ToArray();
-                var genericParams = type.DefineGenericParameters(genericParamNames);
+                var genericParams = genericParamNames.Length > 0 ? type.DefineGenericParameters(genericParamNames) : [];
                 var genericParamIndex = 0;
                 var byreflikeIndex = 0;
 
@@ -519,7 +536,7 @@ namespace MonoMod.Utils.DMDGenerators
 
                 var invokerMethod = invokerType.DefineMethod("Invoker", System.Reflection.MethodAttributes.Static | System.Reflection.MethodAttributes.Public);
 
-                genericParams = invokerMethod.DefineGenericParameters(genericParamNames);
+                genericParams = genericParamNames.Length > 0 ? invokerMethod.DefineGenericParameters(genericParamNames) : [];
                 genericParamIndex = 0;
                 byreflikeIndex = 0;
 
@@ -540,7 +557,7 @@ namespace MonoMod.Utils.DMDGenerators
                 }
 
                 // then a final arg of the delegate type
-                parameters[key.NumParams] = generatedDelegateType.MakeGenericType(genericParams);
+                parameters[key.NumParams] = genericParams.Length > 0 ? generatedDelegateType.MakeGenericType(genericParams) : generatedDelegateType;
                 invokerMethod.SetParameters(parameters);
 
                 // SetImplementationFlags resolves the token, wehich measnwe can't set generic parameters...
@@ -554,7 +571,9 @@ namespace MonoMod.Utils.DMDGenerators
                 }
                 
                 il.EmitCall(OpCodes.Callvirt,
-                    TypeBuilder.GetMethod(parameters[key.NumParams], generatedDelegateType.GetMethod("Invoke")!),
+                    genericParamNames.Length == 0
+                    ? generatedDelegateType.GetMethod("Invoke")!
+                    : TypeBuilder.GetMethod(parameters[key.NumParams], generatedDelegateType.GetMethod("Invoke")!),
                     //parameters[key.NumParams].GetMethod("Invoke")!,
                     //invoke.MakeGenericMethod(genericParams),
                     null);
@@ -569,7 +588,7 @@ namespace MonoMod.Utils.DMDGenerators
 
         private static DelegateTypeResult CreateDelegateTypeWithCecil(DelegateTypeCacheKey key)
         {
-            var typeName = SanitizeTypeName(key.ToString());
+            var typeName = SanitizeTypeName(key.ToString() + $"[{Guid.NewGuid()}]");
 
             using var mod = ModuleDefinition.CreateModule($"MonoMod.DMDGenerators.DelegateTypeGenerator.DelegateTypes.{typeName}", ModuleKind.Dll);
 
@@ -651,8 +670,17 @@ namespace MonoMod.Utils.DMDGenerators
             }
 
             // then finally the delegate type
-            var delegateParamTy = new GenericInstanceType(ty);
-            delegateParamTy.GenericArguments.AddRange(genericParams);
+            TypeReference delegateParamTy;
+            if (genericParams.Length > 0)
+            {
+                var inst = new GenericInstanceType(ty);
+                inst.GenericArguments.AddRange(genericParams);
+                delegateParamTy = inst;
+            }
+            else
+            {
+                delegateParamTy = ty;
+            }
             invokerMethod.Parameters.Add(new(delegateParamTy));
 
             var il = invokerMethod.Body.GetILProcessor();
