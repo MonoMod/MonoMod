@@ -218,26 +218,7 @@ namespace MonoMod.Utils
                     }
                     else if (operand is MemberReference mref)
                     {
-                        var member = mref == def ? _mb : mref.ResolveReflection();
-                        operand = member;
-#if METHODBUILDER_SUPPORTED
-                        if (mb != null && member != null) {
-                            // See DMDGenerator.cs for the explanation of this forced .?
-                            var module = member.Module;
-                            if (module == null)
-                                continue;
-                            var asm = module.Assembly;
-                            if (asm != null && accessChecksIgnored is not null && assemblyBuilder is not null && !accessChecksIgnored.Contains(asm)) {
-                                // while (member.DeclaringType != null)
-                                //     member = member.DeclaringType;
-                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [
-                                    asm.GetName().Name!
-                                ]));
-                                accessChecksIgnored.Add(asm);
-                            }
-                        }
-#endif
-
+                        operand = mref == def ? _mb : mref.ResolveReflection();
                     }
                     else if (operand is CallSite csite)
                     {
@@ -307,6 +288,26 @@ namespace MonoMod.Utils
                         else
                         {
                             throw new NotSupportedException($"Unsupported global method operand on opcode {opcode.Name}");
+                        }
+                    }
+#endif
+
+#if METHODBUILDER_SUPPORTED
+                    if (mb != null && operand is MemberInfo member)
+                    {
+                        // See DMDGenerator.cs for the explanation of this forced .?
+                        var module = member.Module;
+                        if (module == null)
+                            continue;
+                        var asm = module.Assembly;
+                        if (asm != null && accessChecksIgnored is not null && assemblyBuilder is not null && !accessChecksIgnored.Contains(asm))
+                        {
+                            // while (member.DeclaringType != null)
+                            //     member = member.DeclaringType;
+                            assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [
+                                asm.GetName().Name!
+                            ]));
+                            accessChecksIgnored.Add(asm);
                         }
                     }
 #endif
