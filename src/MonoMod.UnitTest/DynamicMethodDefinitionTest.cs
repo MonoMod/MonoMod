@@ -392,9 +392,6 @@ namespace MonoMod.UnitTest
             il.Emit(ReflOpCodes.Ldc_I4_1);
             il.Emit(ReflOpCodes.Add);
             il.Emit(ReflOpCodes.Ret);
-            il.Emit(ReflOpCodes.Ldc_I4_1);
-            il.Emit(ReflOpCodes.Add);
-            il.Emit(ReflOpCodes.Ret);
             return dm;
         }
 
