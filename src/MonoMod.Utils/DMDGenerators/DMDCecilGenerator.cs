@@ -160,15 +160,17 @@ namespace MonoMod.Utils
                         var del = dm.CreateDelegate(delTy);
                         refsHolder.AddStaticField(field.Name, del);
 
-                        body.Instructions.Insert(instri, Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Ldsfld, field));
-                        instri++;
+                        // replace the CURRENT instruction for the ldsfld, so that if we're in the case where we're calling a parameterless method
+                        // and there's a branch targeting that call, it branches to the ldsfld then call correctly
+                        instr.OpCode = Mono.Cecil.Cil.OpCodes.Ldsfld;
+                        operand = field;
 
-                        operand = module.ImportReference(invoker);
+                        // then insert the call proper afterwards (which will be fixed up in the next iteration)
+                        body.Instructions.Insert(instri + 1, Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Call, module.ImportReference(invoker)));
                     }
                     else if (operand is IMetadataTokenProvider mtp)
                     {
                         operand = mtp.Relink(relinker, clone);
-
                     }
 
                     // System.Reflection doesn't contain any volatility info.
@@ -193,7 +195,7 @@ namespace MonoMod.Utils
                         {
                             var caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
                             caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
-                                module.ImportReference(typeof(DebuggableAttribute.DebuggingModes)),
+                                module.ImportReference(typeof(string)),
                                 asmRef.Name
                             ));
                             module.Assembly.CustomAttributes.Add(caAccess);
