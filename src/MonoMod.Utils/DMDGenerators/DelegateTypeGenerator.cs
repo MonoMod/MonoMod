@@ -422,6 +422,20 @@ namespace MonoMod.Utils.DMDGenerators
             return (resultType, false);
         }
 
+        private static string SanitizeTypeName(string name)
+        {
+            return name
+                .Replace('.', '_')
+                .Replace('[', '_')
+                .Replace(']', '_')
+                .Replace(',', '_')
+                .Replace('+', '_')
+                .Replace('\\', '_')
+                .Replace('/', '_')
+                .Replace('`', '_')
+                ;
+        }
+
 #if NET9_0_OR_GREATER // only do this for net9+ so we don't have to deal with mono with trimmed SRE
         private static readonly Lock dynamicAssemblyLock = new();
         private static AssemblyBuilder? dynamicAssembly;
@@ -431,13 +445,26 @@ namespace MonoMod.Utils.DMDGenerators
         {
             lock (dynamicAssemblyLock)
             {
-                dynamicAssembly ??= AssemblyBuilder.DefineDynamicAssembly(
-                    new("MonoMod.DMDGenerators.DelegateTypeGenerator.DelegateTypes"),
-                    AssemblyBuilderAccess.RunAndCollect);
+                if (dynamicAssembly is null)
+                {
+                    dynamicAssembly = AssemblyBuilder.DefineDynamicAssembly(
+                        new("MonoMod.DMDGenerators.DelegateTypeGenerator.DelegateTypes"),
+                        AssemblyBuilderAccess.Run);
+
+                    AppDomain.CurrentDomain.AssemblyResolve += (object? sender, ResolveEventArgs args) =>
+                    {
+                        if (args.Name == dynamicAssembly.FullName)
+                        {
+                            return dynamicAssembly;
+                        }
+
+                        return null;
+                    };
+                }
 
                 dynamicModule ??= dynamicAssembly.DefineDynamicModule(dynamicAssembly.FullName ?? "???");
 
-                var typeName = key.ToString();
+                var typeName = SanitizeTypeName(key.ToString());
 
                 var type = dynamicModule.DefineType(typeName,
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Class,
@@ -457,7 +484,6 @@ namespace MonoMod.Utils.DMDGenerators
                 var invoke = type.DefineMethod("Invoke",
                     System.Reflection.MethodAttributes.Public | System.Reflection.MethodAttributes.Virtual,
                     System.Reflection.CallingConventions.HasThis);
-                invoke.SetImplementationFlags(System.Reflection.MethodImplAttributes.Managed | System.Reflection.MethodImplAttributes.Runtime);
 
                 // return type first
                 invoke.SetReturnType(key.GetReturnType(
@@ -477,6 +503,9 @@ namespace MonoMod.Utils.DMDGenerators
 
                 invoke.SetParameters(parameters);
 
+                // SetImplementationFlags resolves the token, wehich measnwe can't set generic parameters...
+                invoke.SetImplementationFlags(System.Reflection.MethodImplAttributes.Managed | System.Reflection.MethodImplAttributes.Runtime);
+
                 var generatedDelegateType = type.CreateType();
 
                 // we also need to generate an invoker
@@ -484,7 +513,6 @@ namespace MonoMod.Utils.DMDGenerators
                     System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Sealed | System.Reflection.TypeAttributes.Abstract | System.Reflection.TypeAttributes.Class);
 
                 var invokerMethod = invokerType.DefineMethod("Invoker", System.Reflection.MethodAttributes.Static | System.Reflection.MethodAttributes.Public);
-                invokerMethod.SetImplementationFlags(System.Reflection.MethodImplAttributes.IL);
 
                 genericParams = invokerMethod.DefineGenericParameters(genericParamNames);
                 genericParamIndex = 0;
@@ -510,13 +538,21 @@ namespace MonoMod.Utils.DMDGenerators
                 parameters[key.NumParams] = generatedDelegateType.MakeGenericType(genericParams);
                 invokerMethod.SetParameters(parameters);
 
+                // SetImplementationFlags resolves the token, wehich measnwe can't set generic parameters...
+                invokerMethod.SetImplementationFlags(System.Reflection.MethodImplAttributes.IL);
+
                 var il = invokerMethod.GetILGenerator();
                 il.Emit(OpCodes.Ldarg, key.NumParams);
                 for (var i = 0; i < key.NumParams; i++)
                 {
                     il.Emit(OpCodes.Ldarg, i);
                 }
-                il.EmitCall(OpCodes.Callvirt, parameters[key.NumParams].GetMethod("Invoke")!, null);
+                
+                il.EmitCall(OpCodes.Callvirt,
+                    TypeBuilder.GetMethod(parameters[key.NumParams], generatedDelegateType.GetMethod("Invoke")!),
+                    //parameters[key.NumParams].GetMethod("Invoke")!,
+                    //invoke.MakeGenericMethod(genericParams),
+                    null);
                 il.Emit(OpCodes.Ret);
 
                 var generatedInvokerType = invokerType.CreateType();
@@ -528,7 +564,7 @@ namespace MonoMod.Utils.DMDGenerators
 
         private static DelegateTypeResult CreateDelegateTypeWithCecil(DelegateTypeCacheKey key)
         {
-            var typeName = key.ToString();
+            var typeName = SanitizeTypeName(key.ToString());
 
             using var mod = ModuleDefinition.CreateModule($"MonoMod.DMDGenerators.DelegateTypeGenerator.DelegateTypes.{typeName}", ModuleKind.Dll);
 
