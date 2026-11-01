@@ -428,8 +428,13 @@ namespace MonoMod.Utils.DMDGenerators
                 .Replace('.', '_')
                 .Replace('[', '_')
                 .Replace(']', '_')
+                .Replace('<', '_')
+                .Replace('>', '_')
                 .Replace(',', '_')
+                .Replace(' ', '_')
+                .Replace('=', '_')
                 .Replace('+', '_')
+                .Replace('-', '_')
                 .Replace('\\', '_')
                 .Replace('/', '_')
                 .Replace('`', '_')
@@ -568,8 +573,10 @@ namespace MonoMod.Utils.DMDGenerators
 
             using var mod = ModuleDefinition.CreateModule($"MonoMod.DMDGenerators.DelegateTypeGenerator.DelegateTypes.{typeName}", ModuleKind.Dll);
 
-            var ty = new TypeDefinition("", typeName, CecilTypeAttributes.Public | CecilTypeAttributes.Sealed | CecilTypeAttributes.Class);
+            var ty = new TypeDefinition("N", typeName, CecilTypeAttributes.Public | CecilTypeAttributes.Sealed | CecilTypeAttributes.Class);
             mod.Types.Add(ty);
+
+            ty.BaseType = mod.ImportReference(typeof(MulticastDelegate));
 
             var ctor = new MethodDefinition(".ctor", CecilMethodAttributes.SpecialName | CecilMethodAttributes.RTSpecialName | CecilMethodAttributes.Public, mod.TypeSystem.Void)
             {
@@ -612,10 +619,12 @@ namespace MonoMod.Utils.DMDGenerators
             }
 
             // also generate the invoker type
-            var invokerTy = new TypeDefinition("", typeName + "_Invoker", CecilTypeAttributes.Public | CecilTypeAttributes.Sealed | CecilTypeAttributes.Abstract | CecilTypeAttributes.Class);
+            var invokerTy = new TypeDefinition("N", typeName + "_Invoker", CecilTypeAttributes.Public | CecilTypeAttributes.Sealed | CecilTypeAttributes.Abstract | CecilTypeAttributes.Class);
             mod.Types.Add(invokerTy);
 
-            var invokerMethod = new MethodDefinition("Invoker", CecilMethodAttributes.Public | CecilMethodAttributes.Virtual, mod.TypeSystem.Void);
+            invokerTy.BaseType = mod.TypeSystem.Object;
+
+            var invokerMethod = new MethodDefinition("Invoker", CecilMethodAttributes.Public | CecilMethodAttributes.Static, mod.TypeSystem.Void);
             invokerTy.Methods.Add(invokerMethod);
 
             genericParams = Enumerable.Range(0, key.NumGenericParams).Select(i => new GenericParameter(i.ToString(null, null), invokerMethod)).ToArray();
