@@ -85,10 +85,10 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
             }
         }
 
-        public IntPtr CreateAlternateEntrypoint(IntPtr entrypoint, int minLength, out IDisposable? handle)
+        public IntPtr CreateAlternateEntrypoint(IntPtr entrypointPc, IntPtr entrypointCode, int minLength, out IDisposable? handle)
         {
-            var codeReader = new PtrCodeReader(entrypoint);
-            var decoder = Decoder.Create(bitness, codeReader, (ulong)entrypoint, DecoderOptions.NoInvalidCheck | DecoderOptions.AMD);
+            var codeReader = new PtrCodeReader(entrypointCode);
+            var decoder = Decoder.Create(bitness, codeReader, (ulong)entrypointPc, DecoderOptions.NoInvalidCheck | DecoderOptions.AMD);
 
             var insns = new InstructionList();
             while (codeReader.Position < minLength)
@@ -194,7 +194,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 {
                     // if we have an RIP relative address (that wasn't created by us) try to allocate close to the original location
                     Helpers.Assert(alloc.TryAllocateInRange(
-                        new(entrypoint, (nint)entrypoint + int.MinValue, (nint)entrypoint + int.MaxValue,
+                        new(entrypointPc, (nint)entrypointPc + int.MinValue, (nint)entrypointPc + int.MaxValue,
                         new(estTotalSize) { Executable = true }), out allocated));
                 }
                 else

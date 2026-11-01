@@ -47,12 +47,12 @@ namespace MonoMod.Core.Platforms
         /// <remarks>
         /// If this <see cref="SimpleNativeDetour"/> was created as a result of <see cref="PlatformTriple.CreateNativeDetour(IntPtr, IntPtr, int, IntPtr)"/>,
         /// then it is not safe to use this method. Because this method may enlarge the detour, it would need to fix up the generated alt entrypoint too, which is
-        /// not currently supported. Refer to <see cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, int, out IDisposable?)"/> for more information.
+        /// not currently supported. Refer to <see cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, IntPtr, int, out IDisposable?)"/> for more information.
         /// </remarks>
         /// <param name="newTarget">The new target of the detour.</param>
         /// <seealso cref="IArchitecture.ComputeRetargetInfo(NativeDetourInfo, IntPtr, int)"/>
         /// <seealso cref="IArchitecture.GetRetargetBytes(NativeDetourInfo, NativeDetourInfo, Span{byte}, out IDisposable?, out bool, out bool)"/>
-        /// <seealso cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, int, out IDisposable?)"/>
+        /// <seealso cref="IAltEntryFactory.CreateAlternateEntrypoint(IntPtr, IntPtr, int, out IDisposable?)"/>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "allocHandle is correctly transferred around, as needed")]
         public void ChangeTarget(IntPtr newTarget)

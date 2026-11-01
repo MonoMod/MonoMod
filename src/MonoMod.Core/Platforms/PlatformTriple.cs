@@ -488,7 +488,7 @@ namespace MonoMod.Core.Platforms
             IDisposable? altHandle = null;
             if (SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint))
             {
-                altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, size, out altHandle);
+                altEntry = Architecture.AltEntryFactory.CreateAlternateEntrypoint(from, fromRw, size, out altHandle);
                 Volatile.Write(ref altEntryResult, altEntry);
             }
             else
