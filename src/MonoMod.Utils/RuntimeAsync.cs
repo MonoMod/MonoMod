@@ -359,6 +359,15 @@ namespace MonoMod.Utils
             return false;
         }
 
+        /// <summary>
+        /// Emits a runtime async await sequence to <paramref name="il"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>The awaitable is expected to be a valie on the top of the IL stack, <b>even if its a value type</b>.
+        /// After the emitted code, the result (if any) of the awaitable will be on the top of the stack.</para>
+        /// </remarks>
+        /// <param name="il">The <see cref="ILGenerator"/> to emit to/</param>
+        /// <param name="awaitableType">The type of the awaitable on stack.</param>
         public static void EmitAwait(ILGenerator il, Type awaitableType)
         {
             Helpers.ThrowIfArgumentNull(il);
@@ -470,8 +479,15 @@ namespace MonoMod.Utils
             // }
             // (top-of-stack) = awaiter.GetResult();
 
+            if (awaitableType.IsValueType)
+            {
+                var awaitable = il.DeclareLocal(awaitableType);
+                il.Emit(ReflOpCodes.Stloc, awaitable);
+                il.Emit(ReflOpCodes.Ldloca, awaitable);
+            }
+
             var local = il.DeclareLocal(awaiterType);
-            il.EmitCall(ReflOpCodes.Call, getAwaiter, null);
+            il.EmitCall(ReflOpCodes.Callvirt, getAwaiter, null);
             il.Emit(ReflOpCodes.Stloc, local);
 
             var label = il.DefineLabel();
@@ -483,7 +499,7 @@ namespace MonoMod.Utils
             {
                 il.Emit(ReflOpCodes.Ldloc, local);
             }
-            il.EmitCall(ReflOpCodes.Call, isCompletedGetter, null);
+            il.EmitCall(ReflOpCodes.Callvirt, isCompletedGetter, null);
             il.Emit(ReflOpCodes.Brtrue, label);
 
             il.Emit(ReflOpCodes.Ldloc, local);
@@ -498,7 +514,7 @@ namespace MonoMod.Utils
             {
                 il.Emit(ReflOpCodes.Ldloc, local);
             }
-            il.EmitCall(ReflOpCodes.Call, getResult, null);
+            il.EmitCall(ReflOpCodes.Callvirt, getResult, null);
         }
 
 
@@ -552,10 +568,14 @@ namespace MonoMod.Utils
 
 
         /// <summary>
-        /// Emits the runtime await operation for a Cecil awaitable type into a Cecil method body.
+        /// Emits a runtime async await sequence to <paramref name="il"/>.
         /// </summary>
-        /// <param name="il">The IL processor to emit into.</param>
-        /// <param name="awaitableType">The Cecil awaitable type to emit for.</param>
+        /// <remarks>
+        /// <para>The awaitable is expected to be a valie on the top of the IL stack, <b>even if its a value type</b>.
+        /// After the emitted code, the result (if any) of the awaitable will be on the top of the stack.</para>
+        /// </remarks>
+        /// <param name="il">The <see cref="ILProcessor"/> to emit to/</param>
+        /// <param name="awaitableType">The type of the awaitable on stack.</param>
         public static void EmitAwait(ILProcessor il, TypeReference awaitableType)
         {
             Helpers.ThrowIfArgumentNull(il);
@@ -633,6 +653,9 @@ namespace MonoMod.Utils
                 ThrowNotAwaitable();
 
             var awaiterType = getAwaiter.ReturnType;
+            // TODO: resolve awaiterType generics (against awaitable context)
+            // this is HARD for some reason because FUCK cecil
+
             var isCompletedGetter = FindPublicInstancePropertyGetter(module, awaiterType, "IsCompleted");
             if (isCompletedGetter is null || !isCompletedGetter.ReturnType.Is(typeof(bool)))
                 ThrowNotAwaitable();
@@ -659,16 +682,25 @@ namespace MonoMod.Utils
             var genericAwaitMethod = new GenericInstanceMethod(module.ImportReference(awaitMethod));
             genericAwaitMethod.GenericArguments.Add(module.ImportReference(awaiterType));
 
+
+            if (awaitableType.IsValueType)
+            {
+                var awaitable = new VariableDefinition(awaitableType);
+                il.Body.Variables.Add(awaitable);
+                il.Emit(CecilOpCodes.Stloc, awaitable);
+                il.Emit(CecilOpCodes.Ldloca, awaitable);
+            }
+
             var local = new VariableDefinition(awaiterType);
             il.Body.Variables.Add(local);
-            il.Emit(CecilOpCodes.Call, getAwaiter);
+            il.Emit(CecilOpCodes.Callvirt, getAwaiter);
             il.Emit(CecilOpCodes.Stloc, local);
 
             var label = il.Create(CecilOpCodes.Nop);
             var awaiterDefinition = awaiterType.SafeResolve();
             var awaiterIsValueType = awaiterDefinition?.IsValueType ?? awaiterType.IsValueType;
             il.Emit(awaiterIsValueType ? CecilOpCodes.Ldloca : CecilOpCodes.Ldloc, local);
-            il.Emit(CecilOpCodes.Call, isCompletedGetter);
+            il.Emit(CecilOpCodes.Callvirt, isCompletedGetter);
             il.Emit(CecilOpCodes.Brtrue, label);
 
             il.Emit(CecilOpCodes.Ldloc, local);
@@ -676,7 +708,7 @@ namespace MonoMod.Utils
 
             il.Append(label);
             il.Emit(awaiterIsValueType ? CecilOpCodes.Ldloca : CecilOpCodes.Ldloc, local);
-            il.Emit(CecilOpCodes.Call, getResult);
+            il.Emit(CecilOpCodes.Callvirt, getResult);
         }
 
     }
