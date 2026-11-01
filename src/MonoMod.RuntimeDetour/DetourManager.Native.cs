@@ -166,6 +166,8 @@ namespace MonoMod.RuntimeDetour
                 else if (del is null && nativeDetour.IsApplied)
                 {
                     nativeDetour.Undo();
+                    nativeDetour.Dispose();
+                    nativeDetour = null;
                     origDelegate = null;
                 }
 

@@ -134,6 +134,7 @@ namespace MonoMod.Core.Platforms
             public readonly Lock Sync = new();
             private bool isApplying;
             private bool isApplied;
+            private bool isDisposed;
 
             public bool IsApplied
             {
@@ -159,16 +160,19 @@ namespace MonoMod.Core.Platforms
             private static void ThrowInvalidApply()
                 => throw new InvalidOperationException("Cannot apply a detour which is already applied");
 
+            [DoesNotReturn]
+            private static void ThrowDisposed()
+                => throw new ObjectDisposedException(null);
+
             public void Apply()
             {
+                if (isDisposed) ThrowDisposed();
                 if (IsApplied) ThrowInvalidApply();
 
                 lock (Sync)
                 {
-                    if (IsApplied)
-                    {
-                        ThrowInvalidApply();
-                    }
+                    if (isDisposed) ThrowDisposed();
+                    if (IsApplied) ThrowInvalidApply();
 
                     if (IsApplying)
                     {
@@ -196,14 +200,13 @@ namespace MonoMod.Core.Platforms
 
             public void Undo()
             {
+                if (isDisposed) ThrowDisposed();
                 if (!IsApplied) ThrowInvalidUndo();
 
                 lock (Sync)
                 {
-                    if (!IsApplied)
-                    {
-                        ThrowInvalidUndo();
-                    }
+                    if (isDisposed) ThrowDisposed();
+                    if (!IsApplied) ThrowInvalidUndo();
 
                     if (IsApplying)
                     {
@@ -222,15 +225,15 @@ namespace MonoMod.Core.Platforms
                     }
                 }
 
-                OnAfterUndoOutsideLock();
+                // an undo is also equivalent to a dispose according to the contract
+                Dispose();
             }
 
             protected abstract void OnBeforeUndo();
             protected abstract void OnAfterUndo();
-            protected virtual void OnAfterUndoOutsideLock() { }
 
             // NOTE: requires lock being held
-            protected void UndoCore()
+            private void UndoCore()
             {
                 OnBeforeUndo();
 
@@ -252,6 +255,33 @@ namespace MonoMod.Core.Platforms
 
                 OnAfterUndo();
             }
+
+            protected virtual void OnDisposeInLock() { }
+
+            protected virtual void OnDisposeOutsideLock() { }
+
+            public void Dispose()
+            {
+                if (isDisposed) return;
+
+                lock (Sync)
+                {
+                    if (isDisposed) return;
+
+                    isDisposed = true;
+
+                    if (IsApplied)
+                    {
+                        IsApplying = true;
+                        UndoCore();
+                        IsApplying = false;
+                    }
+
+                    OnDisposeInLock();
+                }
+
+                OnDisposeOutsideLock();
+            }
         }
 
         private abstract class CoreDetourBase(DetourBoxBase box) : ICoreDetourBase
@@ -269,15 +299,12 @@ namespace MonoMod.Core.Platforms
             {
                 if (!disposedValue)
                 {
-                    if (disposing)
-                    {
-                        // TODO: dispose managed state (managed objects)
-                    }
+                    //if (disposing)
+                    //{
+                    //    // TODO: dispose managed state (managed objects)
+                    //}
 
-                    if (IsApplied)
-                    {
-                        Undo();
-                    }
+                    DetourBox.Dispose();
                     disposedValue = true;
                 }
             }
@@ -322,9 +349,9 @@ namespace MonoMod.Core.Platforms
             }
             protected override void OnAfterUndo() { }
 
-            protected override void OnAfterUndoOutsideLock()
+            protected override void OnDisposeOutsideLock()
             {
-                base.OnAfterUndoOutsideLock();
+                base.OnDisposeOutsideLock();
 
                 // note: it is safe to do this outside the lock, since if we recieve a callback after we've already undone,
                 // we'll bail out after acquireing that lock anyway. 

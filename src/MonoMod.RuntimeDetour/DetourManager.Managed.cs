@@ -38,7 +38,6 @@ namespace MonoMod.RuntimeDetour
                 if (detour is not null)
                 {
                     detour.Undo();
-                    // TODO: cache trampolineDetours for a time, so they can be reused
                     detour.Dispose();
                 }
             }
