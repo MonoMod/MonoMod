@@ -227,3 +227,77 @@ we need to forward that continuation back to the original method.
 
 This does mean we need to use alt entrypoints for these detours though AFAIK, since we have no way of knowing for sure the JIT
 will want identical suspend data across e.g. tiering.
+
+OSR complicates things though. When a method has patchpoints (i.e. is T0 and is eligible for OSR) the method prologue instead
+looks approximately like this:
+
+```cs
+if (continuation is not null)
+{
+    if (continuation.OSRAddress != 0)
+    {
+        goto *continuation.OSRAddress;
+    }
+
+    switch (continuation.State)
+    {
+    case 0:
+        goto Resume_0;
+    case 1:
+        goto Resume_1;
+    // and so on...
+    }
+}
+
+// ...
+```
+
+When a continuation is recieved, it checks a slot (currently always at the start of the continuation's data segment) containing
+a pointer to the entrypoint of the OSR function associated with the continuation, then jumps to that. When this method suspends,
+it stores 0 to this slot. The OSR methods instead store their own entry pointer.
+
+Those OSR targets then get a prologue that looks like this:
+
+```cs
+if (continuation is not null)
+{
+    if (continuation.OSRAddress != 0)
+    {
+        switch (continuation.State)
+        {
+        case 0:
+            goto Resume_0;
+        case 1:
+            goto Resume_1;
+        // and so on...
+        }
+    }
+}
+
+// ...
+```
+
+I *think* the check against 0 is done assuming that a resume coming in with OSR address 0 is from the patchpoint at the start
+of the T0 resume path corresponding to this T1OSR method.
+
+OK SO the OSR flow goes like this:
+
+---
+
+#### CASE 1: T0 resume from T0 suspend
+Resume passes cont -> continuation not null -> OSR address *is* null -> normal resume in T0.
+Then, at some point, a patchpoint is hit, which spawns then jumps to an OSR variant.
+OSR entrypoint is NOT being resumed, so it goes continuation is null -> normal OSR entry.
+
+#### CASE 2: T1OSR suspend resume
+T1OSR resume addr is T0 entry -> continuation not null -> OSR address not null -> jump to T1OSR
+-> continuation not null -> OSR not null -> normal resume in T1OSR.
+
+---
+
+
+From this, we see that we need to NEVER EVER EVER EVER detour T1OSR compilations, instead only detouring
+T0 and T1 proper.
+
+From this investigation, I think we should have always been completely and totally broken under OSR?
+Maybe it just isn't tested, and nobody has hit it to report an issue?
