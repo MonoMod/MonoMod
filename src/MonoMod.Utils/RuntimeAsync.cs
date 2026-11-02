@@ -518,27 +518,154 @@ namespace MonoMod.Utils
         }
 
 
-        private static MethodReference? FindPublicInstanceMethod(ModuleDefinition module, TypeReference type, string name)
-        {
-            var definition = type.SafeResolve();
-            var method = definition?.FindMethodDeep(name);
-            if (method is not null && method.IsPublic && !method.IsStatic && method.Parameters.Count == 0)
-                return module.ImportReference(method, type);
+        // Finds a public, non-generic, parameterless instance method (or property getter) named `name` on `type` or its
+        // base types. `type` must be owned by `module`. `member` has the (possibly instantiated) declaring type as its
+        // parent, but keeps its signature in terms of the declaring definition's generic parameters, which is what
+        // metadata requires. `returnType` receives the return type with those generic parameters substituted.
 
-            var reflectedMethod = type.ResolveReflection().GetMethod(name, BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
-            return reflectedMethod is null ? null : module.ImportReference(reflectedMethod);
+
+        /// <summary>
+        /// Finds a public instance member (as described by parameters), properly resolving generics along the way.
+        /// </summary>
+        /// <param name="module"></param>
+        /// <param name="type"></param>
+        /// <param name="name"></param>
+        /// <param name="isPropertyGetter"></param>
+        /// <param name="member">The located member.</param>
+        /// <param name="returnType">The return type of <paramref name="member"/>, properly inflated.</param>
+        /// <returns></returns>
+        private static bool TryFindPublicInstanceMember(ModuleDefinition module, TypeReference type, string name, bool isPropertyGetter,
+            [NotNullWhen(true)] out MethodReference? member, [NotNullWhen(true)] out TypeReference? returnType)
+        {
+            for (var current = type; current is not null;)
+            {
+                var definition = current.SafeResolve();
+                if (definition is null)
+                    break;
+
+                var genericContext = current as GenericInstanceType;
+                if (FindPublicInstanceMember(definition, name, isPropertyGetter) is { } method)
+                {
+                    member = ImportOnDeclaringType(module, method, current);
+                    returnType = InflateType(module, method.ReturnType, genericContext);
+                    return true;
+                }
+
+                current = definition.BaseType is { } baseType ? InflateType(module, baseType, genericContext) : null;
+            }
+
+            // Cecil couldn't resolve anything useful, try again going through the reflection resolution path.
+            var reflectedType = type.ResolveReflection();
+            var reflectedMethod = isPropertyGetter
+                ? reflectedType.GetProperty(name, BindingFlags.Public | BindingFlags.Instance)?.GetGetMethod()
+                : reflectedType.GetMethod(name, BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+            if (reflectedMethod is null)
+            {
+                member = null;
+                returnType = null;
+                return false;
+            }
+
+            member = module.ImportReference(reflectedMethod);
+            returnType = module.ImportReference(reflectedMethod.ReturnType);
+            return true;
         }
 
-        private static MethodReference? FindPublicInstancePropertyGetter(ModuleDefinition module, TypeReference type, string name)
+        private static MethodDefinition? FindPublicInstanceMember(TypeDefinition definition, string name, bool isPropertyGetter)
         {
-            var definition = type.SafeResolve();
-            var property = definition?.FindPropertyDeep(name);
-            var getter = property?.GetMethod;
-            if (getter is not null && getter.IsPublic && !getter.IsStatic && getter.Parameters.Count == 0)
-                return module.ImportReference(getter, type);
+            if (isPropertyGetter)
+            {
+                foreach (var property in definition.Properties)
+                {
+                    if (property.Name == name && property.GetMethod is { } getter && IsPublicInstanceNullary(getter))
+                        return getter;
+                }
+            }
+            else
+            {
+                foreach (var method in definition.Methods)
+                {
+                    if (method.Name == name && IsPublicInstanceNullary(method))
+                        return method;
+                }
+            }
+            return null;
 
-            var reflectedGetter = type.ResolveReflection().GetProperty(name, BindingFlags.Public | BindingFlags.Instance)?.GetGetMethod();
-            return reflectedGetter is null ? null : module.ImportReference(reflectedGetter);
+            static bool IsPublicInstanceNullary(MethodDefinition method)
+                => method.IsPublic && !method.IsStatic && !method.HasParameters && !method.HasGenericParameters;
+        }
+
+        // Creates a reference to `method` whose parent is `declaringType` (an instantiation of the method's declaring
+        // type, owned by `module`). The signature is imported as-is, so it still refers to the definition's generic parameters.
+        private static MethodReference ImportOnDeclaringType(ModuleDefinition module, MethodDefinition method, TypeReference declaringType)
+        {
+            var open = module.ImportReference(method);
+            var reference = new MethodReference(open.Name, open.ReturnType, declaringType)
+            {
+                HasThis = open.HasThis,
+                ExplicitThis = open.ExplicitThis,
+                CallingConvention = open.CallingConvention,
+            };
+            foreach (var parameter in open.Parameters)
+                reference.Parameters.Add(new ParameterDefinition(parameter.ParameterType));
+            return reference;
+        }
+
+        // It *sucks* that Cecil doesn't have this or anything like it built in.
+        private static TypeReference InflateType(ModuleDefinition module, TypeReference type, GenericInstanceType? context)
+        {
+            switch (type)
+            {
+                case GenericParameter { Type: GenericParameterType.Type } parameter when context is not null:
+                    return context.GenericArguments[parameter.Position];
+                case GenericParameter parameter:
+                    // it must otherwise be a reference to the method, which isn't inflated in this path
+                    return parameter;
+                case GenericInstanceType instance:
+                {
+                    var inflated = new GenericInstanceType(module.ImportReference(instance.ElementType));
+                    foreach (var argument in instance.GenericArguments)
+                        inflated.GenericArguments.Add(InflateType(module, argument, context));
+                    return inflated;
+                }
+                case ArrayType array:
+                {
+                    var inflated = new ArrayType(InflateType(module, array.ElementType, context));
+                    inflated.Dimensions.Clear();
+                    foreach (var dimension in array.Dimensions)
+                        inflated.Dimensions.Add(dimension);
+                    return inflated;
+                }
+                case ByReferenceType byRef:
+                    return new ByReferenceType(InflateType(module, byRef.ElementType, context));
+                case PointerType pointer:
+                    return new PointerType(InflateType(module, pointer.ElementType, context));
+                case PinnedType pinned:
+                    return new PinnedType(InflateType(module, pinned.ElementType, context));
+                case SentinelType sentinel:
+                    return new SentinelType(InflateType(module, sentinel.ElementType, context));
+                case RequiredModifierType modreq:
+                    return new RequiredModifierType(module.ImportReference(modreq.ModifierType), InflateType(module, modreq.ElementType, context));
+                case OptionalModifierType modopt:
+                    return new OptionalModifierType(module.ImportReference(modopt.ModifierType), InflateType(module, modopt.ElementType, context));
+                case FunctionPointerType fnptr:
+                {
+                    var inflated = new FunctionPointerType
+                    {
+                        ReturnType = InflateType(module, fnptr.ReturnType, context),
+                        HasThis = fnptr.HasThis,
+                        ExplicitThis = fnptr.ExplicitThis,
+                        CallingConvention = fnptr.CallingConvention,
+                    };
+                    foreach (var parameter in fnptr.Parameters)
+                        inflated.Parameters.Add(new ParameterDefinition(InflateType(module, parameter.ParameterType, context)));
+                    return inflated;
+                }
+                case TypeSpecification:
+                    throw new NotSupportedException($"Unsupported type specification: {type}");
+                default:
+                    return module.ImportReference(type);
+            }
         }
 
         private static bool ImplementsInterface(TypeReference type, Type interfaceType)
@@ -648,20 +775,17 @@ namespace MonoMod.Utils
             }
 
             var module = il.Body.Method.Module;
-            var getAwaiter = FindPublicInstanceMethod(module, awaitableType, "GetAwaiter");
-            if (getAwaiter is null)
+
+            // everything below derives member references and locals from this, so it must be owned by `module`
+            var awaitable = module.ImportReference(awaitableType);
+            if (!TryFindPublicInstanceMember(module, awaitable, "GetAwaiter", isPropertyGetter: false, out var getAwaiter, out var awaiterType))
                 ThrowNotAwaitable();
 
-            var awaiterType = getAwaiter.ReturnType;
-            // TODO: resolve awaiterType generics (against awaitable context)
-            // this is HARD for some reason because FUCK cecil
-
-            var isCompletedGetter = FindPublicInstancePropertyGetter(module, awaiterType, "IsCompleted");
-            if (isCompletedGetter is null || !isCompletedGetter.ReturnType.Is(typeof(bool)))
+            if (!TryFindPublicInstanceMember(module, awaiterType, "IsCompleted", isPropertyGetter: true, out var isCompletedGetter, out var isCompletedType)
+                || !isCompletedType.Is(typeof(bool)))
                 ThrowNotAwaitable();
 
-            var getResult = FindPublicInstanceMethod(module, awaiterType, "GetResult");
-            if (getResult is null)
+            if (!TryFindPublicInstanceMember(module, awaiterType, "GetResult", isPropertyGetter: false, out var getResult, out _))
                 ThrowNotAwaitable();
 
             MethodInfo awaitMethod;
@@ -680,15 +804,15 @@ namespace MonoMod.Utils
             }
 
             var genericAwaitMethod = new GenericInstanceMethod(module.ImportReference(awaitMethod));
-            genericAwaitMethod.GenericArguments.Add(module.ImportReference(awaiterType));
+            genericAwaitMethod.GenericArguments.Add(awaiterType);
 
 
-            if (awaitableType.IsValueType)
+            if (awaitable.IsValueType)
             {
-                var awaitable = new VariableDefinition(awaitableType);
-                il.Body.Variables.Add(awaitable);
-                il.Emit(CecilOpCodes.Stloc, awaitable);
-                il.Emit(CecilOpCodes.Ldloca, awaitable);
+                var awaitableLocal = new VariableDefinition(awaitable);
+                il.Body.Variables.Add(awaitableLocal);
+                il.Emit(CecilOpCodes.Stloc, awaitableLocal);
+                il.Emit(CecilOpCodes.Ldloca, awaitableLocal);
             }
 
             var local = new VariableDefinition(awaiterType);
