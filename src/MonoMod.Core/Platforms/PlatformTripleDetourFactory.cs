@@ -646,6 +646,13 @@ namespace MonoMod.Core.Platforms
             MethodBase logicalDst, MethodBase normalDst,
             MethodBase asyncDst, RuntimeAsyncMethodInfo dstAsyncInfo)
         {
+            if (!triple.SupportedFeatures.Has(ArchitectureFeature.CreateAltEntryPoint))
+            {
+                // async variant detours hard-require alternate entrypoints
+                throw new NotSupportedException("Current architecture does not support alternate " +
+                    "entrypoints, which are required for runtime-async method detours.");
+            }
+
             DisableInlining(src, srcAsyncInfo.NormalVariant);
             DisableInlining(src, srcAsyncInfo.AsyncVariant);
 
