@@ -2,6 +2,8 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
+
+using MonoMod.Core;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
@@ -126,6 +128,34 @@ namespace MonoMod.UnitTest
         {
             Console.WriteLine("Detour B");
             TestObject.VoidResult += 2;
+        }
+
+        private struct Big
+        {
+            public long A, B, C;
+        }
+
+        private sealed class BigHolder
+        {
+            public long F = 7;
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            public Big Get() => new() { A = F };
+        }
+
+        private static class GenericTarget<T>
+        {
+            public static T Get(BigHolder self) => (T)(object)new Big { A = self.F + 100 };
+        }
+
+        [Fact]
+        public void DetourToGenericReturnWithReturnBuffer()
+        {
+            var holder = new BigHolder();
+            using (DetourFactory.Current.CreateDetour(typeof(BigHolder).GetMethod(nameof(BigHolder.Get))!, typeof(GenericTarget<Big>).GetMethod(nameof(GenericTarget<Big>.Get))!))
+            {
+                Assert.Equal(107, holder.Get().A);
+            }
         }
     }
 }

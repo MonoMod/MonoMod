@@ -8,6 +8,7 @@ using New::MonoMod.RuntimeDetour;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -450,6 +451,90 @@ namespace MonoMod.UnitTest
             Assert.Equal(42, method.Invoke(null, [1]));
             Assert.Equal(10, method.Invoke(null, [0]));
         }
+
+        [Fact]
+        public void DmdIgnoresAccessChecksForGenericArgs()
+        {
+            using var dmd = new DynamicMethodDefinition("IACTGenerics", typeof(List<PrivateType>), []);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Newobj, dmd.Module.ImportReference(typeof(List<PrivateType>).GetConstructor([])!));
+            il.Emit(OpCodes.Ret);
+
+            using var dmd2 = new DynamicMethodDefinition(dmd);
+            using var dmd3 = new DynamicMethodDefinition(dmd);
+
+            var method1 = DMDCecilGenerator.Generate(dmd);
+            _ = Assert.IsType<List<PrivateType>>(method1.Invoke(null, []));
+
+            var method2 = DMDEmitDynamicMethodGenerator.Generate(dmd2);
+            _ = Assert.IsType<List<PrivateType>>(method2.Invoke(null, []));
+
+#if NETFRAMEWORK || NET9_0_OR_GREATER
+            var method3 = DMDEmitMethodBuilderGenerator.Generate(dmd3);
+            _ = Assert.IsType<List<PrivateType>>(method3.Invoke(null, []));
+#endif
+        }
+
+        [SuppressMessage("", "CA1812", Justification = "It's not supposed to be instantiated; its functionally a marker type.")]
+        private sealed class PrivateType { }
+
+
+
+        private static DynamicMethod Dm(Type ret, Type[] args, Action<ILGenerator> body)
+        {
+            var dm = new DynamicMethod("Target", ret, args, typeof(DynamicMethodDefinitionTest), true);
+            body(dm.GetILGenerator());
+            return dm;
+        }
+
+//#if NETCOREAPP2_1_OR_GREATER
+        private ref struct Collide_Inner
+        {
+            public int X;
+        }
+
+        private static class Collide
+        {
+            public ref struct Inner
+            {
+                public int X;
+            }
+        }
+
+        // 8. Delegate type names can collide: SanitizeTypeName maps '.', '+', '_' etc. all to '_', so Collide_Inner and Collide.Inner
+        // get the same type and assembly name, and the name based AssemblyResolve hands back the first assembly
+        // ("Object of type X cannot be converted to type X"). Fails on net8, passes on net9+ only because the dynamic
+        // assembly path falls back to Cecil with a different assembly name. Two threads creating the same key at once
+        // (GetOrAdd runs the factory twice) end up the same way.
+        // Fix: unique names (counter/guid) for the type and the assembly.
+        [Fact]
+        public void CallDynamicMethodsWithSimilarlyNamedRefStructs()
+        {
+            Assert.Equal(1, CallWithRefStruct(typeof(Collide_Inner), 1));
+            Assert.Equal(2, CallWithRefStruct(typeof(Collide.Inner), 2));
+        }
+
+        private static object? CallWithRefStruct(Type refStruct, int value)
+        {
+            var dm = Dm(typeof(int), [refStruct], il =>
+            {
+                il.Emit(ReflOpCodes.Ldc_I4, value);
+                il.Emit(ReflOpCodes.Ret);
+            });
+
+            using var dmd = new DynamicMethodDefinition("CallRefStruct", typeof(int), []);
+            var local = new Mono.Cecil.Cil.VariableDefinition(dmd.Module.ImportReference(refStruct));
+            dmd.Definition.Body.Variables.Add(local);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldloca, local);
+            il.Emit(OpCodes.Initobj, dmd.Module.ImportReference(refStruct));
+            il.Emit(OpCodes.Ldloc, local);
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(dm));
+            il.Emit(OpCodes.Ret);
+            return DMDCecilGenerator.Generate(dmd).Invoke(null, null);
+        }
+//#endif
+
 
     }
 }

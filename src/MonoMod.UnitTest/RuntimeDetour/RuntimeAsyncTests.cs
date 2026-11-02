@@ -211,5 +211,176 @@ namespace MonoMod.UnitTest
                 Assert.Equal(1, asyncTaskIntCalls);
             }
         }
+
+        private static TaskCompletionSource<int> osrGate = new();
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static async Task<int> OsrLoop(int n)
+        {
+            var s = await osrGate.Task.ConfigureAwait(false);
+            for (var i = 0; i < n; i++)
+                s += i ^ (s >> 3);
+            return s;
+        }
+
+        [SkipIfNoRuntimeAsyncFact]
+        public void SuspendedOriginalSurvivesOsrWhileHooked()
+        {
+            var expected = 3;
+            for (var i = 0; i < 1_000_000; i++)
+                expected += i ^ (expected >> 3);
+
+            osrGate = new();
+            var pending = OsrLoop(1_000_000);
+            using (new Hook(GetMethod(nameof(OsrLoop)), new Func<Func<int, Task<int>>, int, Task<int>>((orig, n) => Task.FromResult(-1))))
+            {
+                osrGate.SetResult(3);
+                Assert.Equal(expected, Run(pending));
+            }
+        }
+
+        private static MethodInfo AwaitDmd(Type awaitable, string source, bool cecil)
+        {
+            using var dmd = new DynamicMethodDefinition("Await", typeof(Task<int>), []);
+            dmd.IsAsync = true;
+            if (cecil)
+            {
+                var il = dmd.GetILProcessor();
+                il.Emit(OpCodes.Call, dmd.Module.ImportReference(GetMethod(source)));
+                RuntimeAsync.EmitAwait(il, dmd.Module.ImportReference(awaitable));
+                il.Emit(OpCodes.Ret);
+            }
+            else
+            {
+                var il = dmd.GetILGenerator();
+                il.Emit(System.Reflection.Emit.OpCodes.Call, GetMethod(source));
+                RuntimeAsync.EmitAwait(il, awaitable);
+                il.Emit(System.Reflection.Emit.OpCodes.Ret);
+            }
+            return dmd.Generate();
+        }
+
+        private sealed class IntAwaiter : INotifyCompletion
+        {
+            private readonly int value;
+            public IntAwaiter(int value) => this.value = value;
+            public bool IsCompleted => true;
+            public int GetResult() => value;
+            public void OnCompleted(Action continuation) => continuation();
+        }
+
+        private struct StructAwaitable
+        {
+            public int Value;
+            public IntAwaiter GetAwaiter() => new(Value);
+        }
+
+        private static StructAwaitable GetStructAwaitable() => new() { Value = 4 };
+
+        [SkipIfNoRuntimeAsyncFact]
+        public void EmitAwaitStructAwaitable()
+        {
+            var method = AwaitDmd(typeof(StructAwaitable), nameof(GetStructAwaitable), cecil: false);
+            Assert.Equal(4, Run((Task<int>)method.Invoke(null, null)!));
+        }
+
+        // 4. EmitAwait emits call where C# emits callvirt, so an overridden GetAwaiter is skipped (also: await null doesn't throw,
+        // interface awaiters give "Bad IL format"). Same for IsCompleted/GetResult, both overloads.
+        // Fix: callvirt when the receiver isn't a value type.
+        private class BaseAwaitable
+        {
+            public virtual IntAwaiter GetAwaiter() => new(1);
+        }
+
+        private sealed class DerivedAwaitable : BaseAwaitable
+        {
+            public override IntAwaiter GetAwaiter() => new(2);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance",
+            Justification = "The point is to return the base, so the await emitter sees only the base")]
+        private static BaseAwaitable GetDerivedAwaitable() => new DerivedAwaitable();
+
+        [SkipIfNoRuntimeAsyncFact]
+        public void EmitAwaitVirtualGetAwaiter()
+        {
+            var method = AwaitDmd(typeof(BaseAwaitable), nameof(GetDerivedAwaitable), cecil: false);
+            Assert.Equal(2, Run((Task<int>)method.Invoke(null, null)!));
+        }
+
+
+        private sealed class GenericAwaiter<T> : INotifyCompletion
+        {
+            private readonly T value;
+            public GenericAwaiter(T value) => this.value = value;
+            public bool IsCompleted => true;
+            public T GetResult() => value;
+            public void OnCompleted(Action continuation) => continuation();
+        }
+
+        private sealed class GenericAwaitable<T>
+        {
+            private readonly T value;
+            public GenericAwaitable(T value) => this.value = value;
+            public GenericAwaiter<T> GetAwaiter() => new(value);
+        }
+
+        private class GenericAwaitableBase<T>
+        {
+            private readonly T value;
+            public GenericAwaitableBase(T value) => this.value = value;
+            public GenericAwaiter<T> GetAwaiter() => new(value);
+        }
+
+        private sealed class GenericDerivedAwaitable<T> : GenericAwaitableBase<T>
+        {
+            public GenericDerivedAwaitable(T value) : base(value) { }
+        }
+
+        private static GenericAwaitable<int> GetGenericAwaitable() => new(9);
+        private static GenericDerivedAwaitable<int> GetGenericDerivedAwaitable() => new(11);
+
+        [SkipIfNoRuntimeAsyncFact]
+        public void CecilEmitAwaitGenericAwaitable()
+        {
+            var method = AwaitDmd(typeof(GenericAwaitable<int>), nameof(GetGenericAwaitable), cecil: true);
+            Assert.Equal(9, Run((Task<int>)method.Invoke(null, null)!));
+        }
+
+        [SkipIfNoRuntimeAsyncFact]
+        public void CecilEmitAwaitKeepsGenericMemberSignatureOpen()
+        {
+            using var dmd = new DynamicMethodDefinition("Await", typeof(Task<int>), []);
+            dmd.IsAsync = true;
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(GetMethod(nameof(GetGenericAwaitable))));
+            RuntimeAsync.EmitAwait(il, dmd.Module.ImportReference(typeof(GenericAwaitable<int>)));
+
+            Mono.Cecil.MethodReference? getAwaiter = null;
+            foreach (var instruction in il.Body.Instructions)
+            {
+                if (instruction.Operand is Mono.Cecil.MethodReference method && method.Name == "GetAwaiter")
+                {
+                    getAwaiter = method;
+                    break;
+                }
+            }
+
+            Assert.NotNull(getAwaiter);
+            var declaringType = Assert.IsType<Mono.Cecil.GenericInstanceType>(getAwaiter!.DeclaringType);
+            Assert.Equal(typeof(int).FullName, declaringType.GenericArguments[0].FullName);
+
+            var returnType = Assert.IsType<Mono.Cecil.GenericInstanceType>(getAwaiter.ReturnType);
+            var returnTypeArgument = Assert.IsType<Mono.Cecil.GenericParameter>(returnType.GenericArguments[0]);
+            Assert.Equal(Mono.Cecil.GenericParameterType.Type, returnTypeArgument.Type);
+            Assert.Equal(0, returnTypeArgument.Position);
+        }
+
+        [SkipIfNoRuntimeAsyncFact]
+        public void CecilEmitAwaitInheritedGenericAwaitable()
+        {
+            var method = AwaitDmd(typeof(GenericDerivedAwaitable<int>), nameof(GetGenericDerivedAwaitable), cecil: true);
+            Assert.Equal(11, Run((Task<int>)method.Invoke(null, null)!));
+        }
     }
 }
