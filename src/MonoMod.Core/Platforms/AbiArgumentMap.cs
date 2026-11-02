@@ -302,8 +302,9 @@ namespace MonoMod.Core.Platforms
                 int srcArgIdx;
                 if (srcArgKind is SpecialArgumentKind.UserArguments)
                 {
-                    Helpers.Assert(srcArgUserIndex >= 0);
-                    if (srcArgUserIndex < sourceAbi.UserArgumentCount)
+                    // if srcArgKind is UserArguments, but srcArgUserIndex was left unset, then this is part of an invalid mapping
+                    // so we should propagate srcArgIndex = -1.
+                    if (srcArgUserIndex >= 0 && srcArgUserIndex < sourceAbi.UserArgumentCount)
                     {
                         srcArgIdx = sourceAbi.FirstUserArgument + srcArgUserIndex;
                     }

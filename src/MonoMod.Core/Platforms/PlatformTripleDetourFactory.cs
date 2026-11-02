@@ -256,7 +256,22 @@ namespace MonoMod.Core.Platforms
                 OnAfterUndo();
             }
 
-            protected virtual void OnDisposeInLock() { }
+            protected virtual void OnDisposeInLock()
+            {
+                // ensure that anything that got left behind gets cleaned up
+
+                foreach (var detour in Detours)
+                {
+                    detour.Dispose();
+                }
+                Detours.Clear();
+
+                foreach (var handle in AllocHandles)
+                {
+                    handle.Dispose();
+                }
+                AllocHandles.Clear();
+            }
 
             protected virtual void OnDisposeOutsideLock() { }
 
@@ -536,6 +551,13 @@ namespace MonoMod.Core.Platforms
                 Interlocked.Exchange(ref dstPin, null)?.Dispose();
             }
 
+            protected override void OnDisposeInLock()
+            {
+                base.OnDisposeInLock();
+                Interlocked.Exchange(ref srcPin, null)?.Dispose();
+                Interlocked.Exchange(ref dstPin, null)?.Dispose();
+            }
+
             [SuppressMessage("Design", "CA1031:Do not catch general exception types",
                 Justification = "We don't want to bubble exceptions out of here, since we're running cooperatively with other handlers")]
             public override void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, nint codeStart, nint codeRw, ulong codeSize)
@@ -751,6 +773,11 @@ namespace MonoMod.Core.Platforms
             protected override void OnAfterUndo()
             {
                 base.OnAfterUndo();
+                keepAlives.Clear();
+            }
+            protected override void OnDisposeInLock()
+            {
+                base.OnDisposeInLock();
                 keepAlives.Clear();
             }
 
