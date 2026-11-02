@@ -295,19 +295,10 @@ namespace MonoMod.Utils
 #if METHODBUILDER_SUPPORTED
                     if (mb != null && operand is MemberInfo member)
                     {
-                        // See DMDGenerator.cs for the explanation of this forced .?
-                        var module = member.Module;
-                        if (module == null)
-                            continue;
-                        var asm = module.Assembly;
-                        if (asm != null && accessChecksIgnored is not null && assemblyBuilder is not null && !accessChecksIgnored.Contains(asm))
+                        // Add IgnoresAccessChecksTo for everything relevant
+                        if (assemblyBuilder is not null && accessChecksIgnored is not null)
                         {
-                            // while (member.DeclaringType != null)
-                            //     member = member.DeclaringType;
-                            assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [
-                                asm.GetName().Name!
-                            ]));
-                            accessChecksIgnored.Add(asm);
+                            AddIgnoresAccessChecks(assemblyBuilder, accessChecksIgnored, member);
                         }
                     }
 #endif
@@ -337,6 +328,96 @@ namespace MonoMod.Utils
                 continue;
             }
         }
+
+#if METHODBUILDER_SUPPORTED
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, MemberInfo member)
+        {
+            switch (member)
+            {
+                case FieldInfo field:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, field);
+                    return;
+                case MethodBase method:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, method);
+                    return;
+                case Type type:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, type);
+                    return;
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, FieldInfo field)
+        {
+            if (field.Module is { Assembly: { } asm })
+            {
+                if (ignored.Add(asm))
+                {
+                    assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(
+                        DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [asm.GetName().Name!]));
+                }
+            }
+
+            if (field.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.DeclaringType);
+            }
+
+            if (field.FieldType is not null)
+            {
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.FieldType);
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, MethodBase method)
+        {
+            if (method.Module is { Assembly: { } asm })
+            {
+                if (ignored.Add(asm))
+                {
+                    assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(
+                        DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [asm.GetName().Name!]));
+                }
+            }
+
+            if (method.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, method.DeclaringType);
+            }
+
+            if (method.IsGenericMethod && !method.IsGenericMethodDefinition)
+            {
+                var types = method.GetGenericArguments();
+                foreach (var ty in types)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, Type type)
+        {
+            if (type.IsGenericParameter)
+                return;
+
+            if (ignored.Add(type.Assembly))
+            {
+                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(
+                    DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [type.Assembly.GetName().Name!]));
+            }
+
+            // do the same for any directly referenced type args
+            if (type.IsGenericType && !type.IsGenericTypeDefinition)
+            {
+                var typeArgs = type.GetGenericArguments();
+                foreach (var ty in typeArgs)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
+#endif
 
         public static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type>? modReq = null, List<Type>? modOpt = null)
         {

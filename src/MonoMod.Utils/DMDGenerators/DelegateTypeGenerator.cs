@@ -455,6 +455,8 @@ namespace MonoMod.Utils.DMDGenerators
                 .Replace('\\', '_')
                 .Replace('/', '_')
                 .Replace('`', '_')
+                .Replace('*', '_')
+                .Replace('&', '_')
                 ;
         }
 

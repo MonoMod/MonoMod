@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace MonoMod.Utils
 {
@@ -190,17 +191,7 @@ namespace MonoMod.Utils
 
                     if (accessChecksIgnored != null && operand is MemberReference mref)
                     {
-                        var asmRef = (mref as TypeReference)?.Scope ?? mref.DeclaringType.Scope;
-                        if (!accessChecksIgnored.Contains(asmRef.Name))
-                        {
-                            var caAccess = new CustomAttribute(module.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
-                            caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
-                                module.ImportReference(typeof(string)),
-                                asmRef.Name
-                            ));
-                            module.Assembly.CustomAttributes.Add(caAccess);
-                            accessChecksIgnored.Add(asmRef.Name);
-                        }
+                        AddIgnoresAccessChecks(module.Assembly, accessChecksIgnored, mref);
                     }
 
                     instr.Operand = operand;
@@ -259,5 +250,113 @@ namespace MonoMod.Utils
             }
         }
 
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, MemberReference member)
+        {
+            switch (member)
+            {
+                case FieldReference field:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, field);
+                    return;
+                case MethodReference method:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, method);
+                    return;
+                case TypeReference type:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, type);
+                    return;
+            }
+        }
+
+        private static string GetSourceAssemblyName(MemberReference reference)
+        {
+            var scope = reference is TypeReference tr ? tr.Scope : reference.DeclaringType.Scope;
+
+            return scope.MetadataScopeType switch
+            {
+                MetadataScopeType.AssemblyNameReference => ((AssemblyNameReference)scope).Name,
+                MetadataScopeType.ModuleReference => ((ModuleReference)scope).Name,
+                MetadataScopeType.ModuleDefinition => ((ModuleDefinition)scope).Assembly.Name.Name,
+                _ => throw new NotSupportedException($"MetadataScopeType={scope.MetadataScopeType}"),
+            };
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, FieldReference field)
+        {
+            var asmName = GetSourceAssemblyName(field);
+            if (ignored.Add(asmName))
+            {
+                var caAccess = new CustomAttribute(assemblyBuilder.MainModule.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                    assemblyBuilder.MainModule.ImportReference(typeof(string)),
+                    asmName
+                ));
+                assemblyBuilder.CustomAttributes.Add(caAccess);
+            }
+
+            if (field.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.DeclaringType);
+            }
+
+            if (field.FieldType is not null)
+            {
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.FieldType);
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, MethodReference method)
+        {
+            var asmName = GetSourceAssemblyName(method);
+            if (ignored.Add(asmName))
+            {
+                var caAccess = new CustomAttribute(assemblyBuilder.MainModule.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                    assemblyBuilder.MainModule.ImportReference(typeof(string)),
+                    asmName
+                ));
+                assemblyBuilder.CustomAttributes.Add(caAccess);
+            }
+
+            if (method.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, method.DeclaringType);
+            }
+
+            if (method is GenericInstanceMethod inst)
+            {
+                foreach (var ty in inst.GenericArguments)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyDefinition assemblyBuilder, HashSet<string> ignored, TypeReference type)
+        {
+            if (type.IsGenericParameter)
+                return;
+
+            var asmName = GetSourceAssemblyName(type);
+            if (ignored.Add(asmName))
+            {
+                var caAccess = new CustomAttribute(assemblyBuilder.MainModule.ImportReference(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute));
+                caAccess.ConstructorArguments.Add(new CustomAttributeArgument(
+                    assemblyBuilder.MainModule.ImportReference(typeof(string)),
+                    asmName
+                ));
+                assemblyBuilder.CustomAttributes.Add(caAccess);
+            }
+
+            // do the same for any directly referenced type args
+            if (type is GenericInstanceType inst)
+            {
+                foreach (var ty in inst.GenericArguments)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
     }
 }
