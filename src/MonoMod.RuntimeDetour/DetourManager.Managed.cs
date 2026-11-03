@@ -307,7 +307,11 @@ namespace MonoMod.RuntimeDetour
 
             public void AddDetour(SingleManagedDetourState detour, bool takeLock = true)
             {
-                ManagedDetourChainNode cnode;
+                const int LastAction_None = 0;
+                const int LastAction_ChainNode = 1;
+                const int LastAction_EndOfChain = 2;
+
+                var lastAction = LastAction_None;
                 var lockTaken = false;
                 try
                 {
@@ -316,7 +320,7 @@ namespace MonoMod.RuntimeDetour
                     if (detour.ManagerData is not null)
                         throw new InvalidOperationException("Trying to add a detour which was already added");
 
-                    cnode = new ManagedDetourChainNode(detour);
+                    var cnode = new ManagedDetourChainNode(detour);
                     detourChainVersion++;
                     if (cnode.Config is { } cfg)
                     {
@@ -334,9 +338,38 @@ namespace MonoMod.RuntimeDetour
 
                         detour.ManagerData = cnode;
                     }
+                    lastAction = LastAction_ChainNode;
 
                     PrepareEndOfChain(detour.Factory);
+                    lastAction = LastAction_EndOfChain;
+
                     UpdateChain(detour.Factory, out _);
+                }
+                catch
+                {
+                    if (lastAction >= LastAction_ChainNode)
+                    {
+                        // if an exception is thrown here the detour could not be attached properly, so make sure it doesn't get marked as appleid
+                        var mgr = detour.ManagerData;
+                        detour.ManagerData = null;
+
+                        switch (mgr)
+                        {
+                            case null:
+                            default:
+                                break;
+
+                            case DepGraphNode<ManagedChainNode> gnode:
+                                detourGraph.Remove(gnode);
+                                break;
+                            case ManagedDetourChainNode cnode:
+                                noConfigChain = cnode.Next;
+                                cnode.Next = null;
+                                break;
+                        }
+                    }
+
+                    throw;
                 }
                 finally
                 {
