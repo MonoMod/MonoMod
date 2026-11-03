@@ -23,6 +23,9 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         protected override int VtableIndexICorJitInfoAllocMem => V70.ICorJitInfoVtable.AllocMemIndex;
         protected override int ICorJitInfoFullVtableCount => V70.ICorJitInfoVtable.TotalVtableCount;
+        protected override int VtableIndexICorJitInfoGetJitFlags => V70.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected override int CORJIT_FLAG_OSR => 13;
+        protected override int SizeofCORJIT_FLAG => 16;
 
         protected override MethodInfo GetOrCreateGetTypeFromHandleUnsafe()
         {

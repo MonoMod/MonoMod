@@ -20,5 +20,9 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         protected override int VtableIndexICorJitInfoAllocMem => V90.ICorJitInfoVtable.AllocMemIndex;
         protected override int ICorJitInfoFullVtableCount => V90.ICorJitInfoVtable.TotalVtableCount;
+
+        protected override int VtableIndexICorJitInfoGetJitFlags => V90.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected override int CORJIT_FLAG_OSR => 7;
+        protected override int SizeofCORJIT_FLAG => 24;
     }
 }

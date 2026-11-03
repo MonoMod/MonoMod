@@ -21,6 +21,7 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected override Guid ExpectedJitVersion => JitVersionGuid;
 
         protected override InvokeCompileMethodPtr InvokeCompileMethodPtr => V30.InvokeCompileMethodPtr;
+        protected override int VtableIndexICorJitInfoGetJitFlags => V30.ICorJitInfoVtable.GetJitFlagsIndex;
 
         protected override Delegate CastCompileHookToRealType(Delegate del)
             => del.CastDelegate<V30.CompileMethodDelegate>();

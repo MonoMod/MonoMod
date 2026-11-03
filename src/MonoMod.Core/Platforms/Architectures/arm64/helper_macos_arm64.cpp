@@ -131,7 +131,7 @@ namespace JitHooks60
             memset(&allocMem_Args, 0, sizeof(allocMem_Args));
 
         int res = jitHookConfig.compileMethod(pThis, comp, info, flags, nativeEntry, nativeSizeOfCode);
-        if (entrancy == 1)
+        if (entrancy == 1 && res == 0)
         {
             try
             {

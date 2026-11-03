@@ -345,6 +345,10 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected override int VtableIndexICorJitInfoAllocMem => V110.ICorJitInfoVtable.AllocMemIndex;
         protected override int ICorJitInfoFullVtableCount => V110.ICorJitInfoVtable.TotalVtableCount;
 
+        protected override int VtableIndexICorJitInfoGetJitFlags => V110.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected override int CORJIT_FLAG_OSR => 7;
+        protected override int SizeofCORJIT_FLAG => 24;
+
         protected override Delegate CastAllocMemToRealType(Delegate del)
             => del.CastDelegate<V110.AllocMemDelegate>();
 

@@ -235,6 +235,7 @@ namespace MonoMod.Core.Interop
                 // B5: CorInfoReloc getRelocTypeHint(void *)
                 // B6: uint32_t getExpectedTargetArchitecture()
                 // B7: uint32_t getJitFlags(CORJIT_FLAGS *, uint32_t)
+                public const int GetJitFlagsIndex = 0xB7;
 
                 public const int TotalVtableCount = 0xB8;
             }

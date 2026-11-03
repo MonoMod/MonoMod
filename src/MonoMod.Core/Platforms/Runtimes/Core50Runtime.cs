@@ -21,6 +21,9 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected override int VtableIndexICorJitCompilerGetVersionGuid => 2;
 
         protected override InvokeCompileMethodPtr InvokeCompileMethodPtr => V50.InvokeCompileMethodPtr;
+        protected override int VtableIndexICorJitInfoGetJitFlags => V50.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected override int CORJIT_FLAG_OSR => 13;
+        protected override int SizeofCORJIT_FLAG => 16;
 
         protected override Delegate CastCompileHookToRealType(Delegate del)
             => del.CastDelegate<V50.CompileMethodDelegate>();
