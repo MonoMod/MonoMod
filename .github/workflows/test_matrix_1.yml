@@ -6,6 +6,8 @@ on:
       matrix:
         required: true
         type: string
+      title:
+        type: string
   
 defaults:
   run:
@@ -20,3 +22,4 @@ jobs:
     name: ${{ matrix.title }}
     with:
       matrix: ${{ toJSON(matrix.matrix) }}  
+      title: ${{ inputs.title }}

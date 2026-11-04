@@ -168,6 +168,7 @@ jobs:
     name: ${{ matrix.title }}
     with:
       matrix: ${{ toJSON(matrix.matrix) }}
+      title: ${{ matrix.title }}
       
   upload:
     needs: [setup, build-testassets]
