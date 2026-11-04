@@ -99,15 +99,29 @@ namespace MonoMod.Utils
         }
 
         public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes)
+            : this(name, returnType, parameterTypes, MMReflectionImporter.ProviderNoDefault)
+        {
+        }
+
+        /// <summary>
+        /// Creates an empty method whose module imports reflection members through <paramref name="reflectionImporterProvider"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="GetILGenerator"/> imports operands without a generic context. A provider can supply one,
+        /// for example when the body is written for a generic method definition and its operands reference
+        /// that definition's type parameters.
+        /// </remarks>
+        public DynamicMethodDefinition(string name, Type? returnType, Type[] parameterTypes, IReflectionImporterProvider reflectionImporterProvider)
         {
             Helpers.ThrowIfArgumentNull(name);
             Helpers.ThrowIfArgumentNull(parameterTypes);
+            Helpers.ThrowIfArgumentNull(reflectionImporterProvider);
 
             Name = name;
             OriginalMethod = null;
             Debug = GetDefaultDebugValue();
 
-            _CreateDynModule(name, returnType, parameterTypes, out var module, out var definition);
+            _CreateDynModule(name, returnType, parameterTypes, reflectionImporterProvider, out var module, out var definition);
             Module = module;
             Definition = definition;
         }
@@ -130,10 +144,16 @@ namespace MonoMod.Utils
 
         private void _CreateDynModule(string name, Type? returnType, Type[] parameterTypes, out ModuleDefinition Module, out MethodDefinition Definition)
         {
+            _CreateDynModule(name, returnType, parameterTypes, MMReflectionImporter.ProviderNoDefault, out Module, out Definition);
+        }
+
+        private void _CreateDynModule(string name, Type? returnType, Type[] parameterTypes, IReflectionImporterProvider reflectionImporterProvider,
+            out ModuleDefinition Module, out MethodDefinition Definition)
+        {
             var module = Module = ModuleDefinition.CreateModule($"DMD:DynModule<{name}>?{GetHashCode()}", new ModuleParameters()
             {
                 Kind = ModuleKind.Dll,
-                ReflectionImporterProvider = MMReflectionImporter.ProviderNoDefault
+                ReflectionImporterProvider = reflectionImporterProvider
             });
 
             var type = new TypeDefinition(

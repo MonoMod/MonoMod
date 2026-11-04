@@ -1,5 +1,6 @@
 extern alias New;
 
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Core.Platforms;
@@ -248,6 +249,44 @@ namespace MonoMod.UnitTest
         private static int TargetTest<TA, TB>()
         {
             return 2;
+        }
+
+        [Fact]
+        public void DMDUsesSuppliedReflectionImporterProvider()
+        {
+            var provider = new CountingImporterProvider();
+            using var dmd = new DynamicMethodDefinition("Imported", typeof(string), [typeof(int)], provider);
+
+            Assert.Equal(1, provider.Created);
+            Assert.Equal(2, provider.Imported);
+            Assert.Equal("System.String", dmd.Definition.ReturnType.FullName);
+
+            dmd.GetILGenerator().Emit(System.Reflection.Emit.OpCodes.Ldtoken, typeof(List<int>));
+            Assert.Equal(3, provider.Imported);
+        }
+
+        private sealed class CountingImporterProvider : IReflectionImporterProvider
+        {
+            public int Created;
+            public int Imported;
+
+            public IReflectionImporter GetReflectionImporter(ModuleDefinition module)
+            {
+                Created++;
+                return new CountingImporter(this, new MMReflectionImporter(module) { UseDefault = false });
+            }
+
+            private sealed class CountingImporter(CountingImporterProvider owner, IReflectionImporter inner) : IReflectionImporter
+            {
+                public AssemblyNameReference ImportReference(AssemblyName name) => inner.ImportReference(name);
+                public TypeReference ImportReference(Type type, IGenericParameterProvider context)
+                {
+                    owner.Imported++;
+                    return inner.ImportReference(type, context);
+                }
+                public FieldReference ImportReference(FieldInfo field, IGenericParameterProvider context) => inner.ImportReference(field, context);
+                public MethodReference ImportReference(MethodBase method, IGenericParameterProvider context) => inner.ImportReference(method, context);
+            }
         }
 
         [Fact]
