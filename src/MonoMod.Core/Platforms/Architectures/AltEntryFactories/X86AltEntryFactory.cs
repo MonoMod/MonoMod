@@ -88,7 +88,7 @@ namespace MonoMod.Core.Platforms.Architectures.AltEntryFactories
                 var buffer = maxSize <= MaxStackCodeSize
                     ? stackalloc byte[MaxStackCodeSize]
                     : new byte[maxSize];
-                buffer = buffer.Slice(maxSize);
+                buffer = buffer.Slice(0, maxSize);
 
                 var size = X86CodeRelocator.Encode(code, srcIp, insns, blockLength, is64, (nuint)(nint)allocated.BaseAddress, buffer);
                 buffer.Slice(size).Fill(0xCC);
