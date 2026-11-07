@@ -6,6 +6,8 @@ on:
       matrix:
         required: true
         type: string
+      title:
+        type: string
   
 defaults:
   run:
@@ -221,7 +223,7 @@ jobs:
       uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
-        name: test-results ${{ matrix.title }}
+        name: test-results ${{ inputs.title }} ${{ matrix.title }}
         retention-days: 1
         path: |
           TestResults/*.trx
@@ -232,7 +234,7 @@ jobs:
       uses: actions/upload-artifact@v6
       if: ${{ always() }}
       with:
-        name: test-dumps ${{ matrix.title }}
+        name: test-dumps ${{ inputs.title }} ${{ matrix.title }}
         retention-days: 1
         if-no-files-found: ignore
         path: |
