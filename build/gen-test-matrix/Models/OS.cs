@@ -151,6 +151,9 @@ internal sealed record OS : Enableable
             DllPrefix = "lib",
             DllSuffix = ".dylib",
 
+            // GitHub's MacOS-14 runners are seemingly dead
+            Enabled = false,
+
             Arch = [
                 //new() { RidName = "x64", UnityName = "macos_x64" }, // note: this comes from Rosetta
                 new() { RidName = "arm64", UnityName = "macos_arm64", IsRunnerArch = true },
