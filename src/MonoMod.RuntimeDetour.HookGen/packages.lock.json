@@ -99,17 +99,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.10.4, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -248,17 +240,9 @@
         "resolved": "4.5.0",
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -408,19 +392,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
-          "System.Reflection.Emit.Lightweight": "[4.7.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -559,17 +533,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -688,17 +654,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -817,17 +775,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -946,17 +896,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -1075,17 +1017,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -1204,17 +1138,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -1333,17 +1259,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",
@@ -1462,17 +1380,9 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.core": {
         "type": "Project",
         "dependencies": {
-          "Iced": "[1.21.0, )",
           "Mono.Cecil": "[0.11.6, )",
           "MonoMod.Backports": "[1.1.2, )",
           "MonoMod.ILHelpers": "[1.1.0, )",

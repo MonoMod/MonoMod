@@ -99,13 +99,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.utils": {
         "type": "Project",
         "dependencies": {
@@ -218,13 +211,6 @@
         "type": "Transitive",
         "resolved": "4.5.0",
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
-      },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
       },
       "monomod.utils": {
         "type": "Project",
@@ -350,15 +336,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )",
-          "System.Reflection.Emit.ILGeneration": "[4.7.0, )",
-          "System.Reflection.Emit.Lightweight": "[4.7.0, )"
-        }
-      },
       "monomod.utils": {
         "type": "Project",
         "dependencies": {
@@ -466,13 +443,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.utils": {
         "type": "Project",
         "dependencies": {
@@ -565,13 +535,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
       },
       "monomod.utils": {
         "type": "Project",
@@ -666,13 +629,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.utils": {
         "type": "Project",
         "dependencies": {
@@ -765,13 +721,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
       },
       "monomod.utils": {
         "type": "Project",
@@ -866,13 +815,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.utils": {
         "type": "Project",
         "dependencies": {
@@ -965,13 +907,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
       },
       "monomod.utils": {
         "type": "Project",
@@ -1066,13 +1001,6 @@
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
       },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
-      },
       "monomod.utils": {
         "type": "Project",
         "dependencies": {
@@ -1165,13 +1093,6 @@
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "iced": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.Backports": "[1.1.2, )",
-          "MonoMod.ILHelpers": "[1.1.0, )"
-        }
       },
       "monomod.utils": {
         "type": "Project",

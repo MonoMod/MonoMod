@@ -352,7 +352,7 @@ namespace MonoMod.Core.Platforms.Architectures
         public x86_64Arch(ISystem system)
         {
             this.system = system;
-            AltEntryFactory = new IcedAltEntryFactory(system, 64);
+            AltEntryFactory = new X86AltEntryFactory(system, is64: true);
         }
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",

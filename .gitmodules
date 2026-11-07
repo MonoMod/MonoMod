@@ -1,3 +1,0 @@
-[submodule "external/iced"]
-	path = external/iced
-	url = https://github.com/icedland/iced.git

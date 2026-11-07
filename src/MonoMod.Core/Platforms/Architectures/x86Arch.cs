@@ -165,7 +165,7 @@ namespace MonoMod.Core.Platforms.Architectures
         public x86Arch(ISystem system)
         {
             this.system = system;
-            AltEntryFactory = new IcedAltEntryFactory(system, 32);
+            AltEntryFactory = new X86AltEntryFactory(system, is64: false);
         }
 
         private const int WinThisVtableThunkIndexOffs = 0x7;

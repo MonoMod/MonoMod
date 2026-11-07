@@ -19,7 +19,6 @@
 
   <!-- Dependencies -->
   <ItemGroup>
-    <ProjectReference Include="$(MMExternalPath)iced.csproj" Private="true" />
     <PackageReference Include="Mono.Cecil" />
   </ItemGroup>
 
