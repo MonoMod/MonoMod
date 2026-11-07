@@ -2,6 +2,7 @@
 #pragma warning disable xUnit1013 // Public method should be marked as test
 
 extern alias New;
+using MonoMod.Core;
 using New::MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
@@ -58,12 +59,12 @@ namespace MonoMod.UnitTest
                     () => TestMethod_B(default, default, default)
                 );
                 using var detourTestStaticMethodB = new Hook(
-                     () => TestObject.TestStaticMethod(default, default),
-                     () => TestStaticMethod_B(default, default)
+                    () => TestObject.TestStaticMethod(default, default),
+                    () => TestStaticMethod_B(default, default)
                 );
                 using var detourTestVoidMethodB = new Hook(
-                     () => TestObject.TestVoidMethod(default, default),
-                     () => TestVoidMethod_B(default, default)
+                    () => TestObject.TestVoidMethod(default, default),
+                    () => TestVoidMethod_B(default, default)
                 );
                 Console.WriteLine("Detours: A + B");
                 TestObject.TestStep(120, 8, 2);
@@ -89,6 +90,69 @@ namespace MonoMod.UnitTest
                 Console.WriteLine();
             }
         }
+
+        [Fact]
+        public void Test_GenericClassDetour()
+        {
+            var originalMethod1 = typeof(AbstractGenericTestObject<double, DoubleTestItem>).GetMethod("GetDouble");
+            Assert.NotNull(originalMethod1);
+
+            var replacement1 = typeof(TestObjectPatch).GetMethod("TestDetour1");
+            Assert.NotNull(replacement1);
+
+            var obj1 = new TestObjectDouble();
+            var obj2 = new TestObjectString();
+            Assert.Equal(1, obj1.GetDouble());
+            Assert.Equal(1, obj2.GetDouble());
+
+            var detour1 = DetourFactory.Current.CreateDetour(originalMethod1, replacement1);
+
+            Assert.Equal(999, obj1.GetDouble());
+            Assert.Equal(1, obj2.GetDouble());
+
+            var originalMethod2 = typeof(AbstractGenericTestObject<string, StringTestItem>).GetMethod("GetDouble");
+            Assert.NotNull(originalMethod2);
+
+            var replacement2 = typeof(TestObjectPatch).GetMethod("TestDetour2");
+            Assert.NotNull(replacement2);
+
+            var detour2 = DetourFactory.Current.CreateDetour(originalMethod2, replacement2);
+            Assert.Equal(888, obj2.GetDouble());
+            Assert.Equal(999, obj1.GetDouble());
+
+            detour1.Undo();
+            detour1.Dispose();
+            Assert.Equal(1, obj1.GetDouble());
+            Assert.Equal(888, obj2.GetDouble());
+
+            detour2.Undo();
+            detour2.Dispose();
+            Assert.Equal(1, obj1.GetDouble());
+            Assert.Equal(1, obj2.GetDouble());
+        }
+
+        [Fact]
+        public void Test_GenericClassDetourWithoutGenericParameter()
+        {
+            var originalMethod = typeof(TestSingleGenericObject<>).GetMethod("GetDouble");
+            Assert.NotNull(originalMethod);
+
+            var replacement = typeof(TestObjectPatch).GetMethod("TestDetour3");
+            Assert.NotNull(replacement);
+
+            var instance = new TestSingleGenericObject<string>();
+            Assert.Equal(1, instance.GetDouble());
+
+            // Creating a detour on an open generic type definition (TestSingleGenericObject<>)
+            // throws because methods on unbound generic types cannot be JIT compiled.
+            // To detour a generic method, use a closed generic type like TestSingleGenericObject<string>.
+            Assert.Throws<ArgumentException>(() =>
+                DetourFactory.Current.CreateDetour(originalMethod, replacement));
+
+            // Verify the instance still works normally
+            Assert.Equal(1, instance.GetDouble());
+        }
+
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static int TestMethod_A(TestObject self, int a, int b)

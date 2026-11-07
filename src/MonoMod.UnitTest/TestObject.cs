@@ -72,7 +72,36 @@ namespace MonoMod.UnitTest
         }
     }
 
-    internal class TestObjectInheritsGeneric : TestObjectGeneric<int, TestObjectInheritsGeneric>
+    internal class TestObjectInheritsGeneric : TestObjectGeneric<int, TestObjectInheritsGeneric>;
+    
+    public class TestObjectDouble : AbstractGenericTestObject<double, DoubleTestItem>;
+    public class TestObjectString : AbstractGenericTestObject<string, StringTestItem>;
+
+    public abstract class AbstractGenericTestObject<T, TItem> where TItem : ITestItem
     {
+        public virtual double GetDouble() => 1;
+    }
+
+    public class DoubleTestItem : ITestItem;
+    public class StringTestItem : ITestItem;
+    
+    
+    public class TestSingleGenericObject<T>
+    {
+        public double GetDouble() => 1;
+    }
+    
+    public class TestConstrainedGenericObject<T> where T : ITestItem
+    {
+        public double GetDouble() => 1;
+    }
+    
+    public interface ITestItem;
+
+    public class TestObjectPatch
+    {
+        public static double TestDetour1(object self) => 999;
+        public static double TestDetour2(object self) => 888;
+        public static double TestDetour3(object self) => 777;
     }
 }
