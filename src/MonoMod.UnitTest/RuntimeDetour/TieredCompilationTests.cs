@@ -9,6 +9,8 @@ using Xunit.Abstractions;
 
 namespace MonoMod.UnitTest
 {
+    [CollectionDefinition(nameof(TieredCompilationTests), DisableParallelization = true)]
+    [Collection(nameof(TieredCompilationTests))]
     public class TieredCompilationTests : TestBase
     {
 
@@ -36,6 +38,27 @@ namespace MonoMod.UnitTest
             using (new Hook(() => From(), () => To()))
             {
                 TestFrom();
+            }
+        }
+
+        [Fact]
+        public void HookAfterTierUp()
+        {
+            var sw = new Stopwatch();
+            for (var loop = 0; loop < 5; loop++)
+            {
+                for (var i = 0; i < 1000; i++)
+                    From();
+                sw.Restart();
+                while (sw.ElapsedMilliseconds < 200)
+                    Empty();
+            }
+
+            using (new Hook(() => From(), () => To()))
+            {
+                TargetHit = false;
+                From();
+                Assert.True(TargetHit);
             }
         }
 
@@ -84,6 +107,7 @@ namespace MonoMod.UnitTest
         private static void Empty() { }
 
         // Importantly, the quick JIT is disabled when it contains loops (in 3, seemingly not in 5)
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private static void From()
         {
             Empty();
