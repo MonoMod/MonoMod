@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   
-  <Import Project="Sdk.props" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="1.2.39" />
+  <Import Project="Sdk.props" Sdk="DotNet.ReproducibleBuilds.Isolated" Version="2.0.5" />
 
   <ItemGroup>
-    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.39" PrivateAssets="All"/>
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="2.0.5" PrivateAssets="All"/>
   </ItemGroup>
 
   <!-- These properties are defaults for ALL project types. C#-specific things must go in Common.CS.props -->

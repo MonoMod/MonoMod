@@ -5,6 +5,7 @@ namespace MonoMod.Utils
 {
     internal interface IDMDGenerator
     {
+        bool SupportsAsyncMethods { get; }
         MethodInfo Generate(DynamicMethodDefinition dmd, object? context);
     }
     /// <summary>
@@ -13,20 +14,28 @@ namespace MonoMod.Utils
     /// <typeparam name="TSelf">The derived type.</typeparam>
     public abstract class DMDGenerator<TSelf> : IDMDGenerator where TSelf : DMDGenerator<TSelf>, new()
     {
+        private static TSelf? instance;
+        internal static TSelf Instance
+            => Helpers.GetOrInit(ref instance, static () => new TSelf());
 
-        private static TSelf? Instance;
+        protected virtual bool SupportsAsyncMethods => false;
+        bool IDMDGenerator.SupportsAsyncMethods => SupportsAsyncMethods;
 
         protected abstract MethodInfo GenerateCore(DynamicMethodDefinition dmd, object? context);
 
         MethodInfo IDMDGenerator.Generate(DynamicMethodDefinition dmd, object? context)
         {
+            if (dmd.IsAsync)
+            {
+                Helpers.Assert(SupportsAsyncMethods);
+            }
             return Postbuild(GenerateCore(dmd, context));
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1000:Do not declare static members on generic types",
             Justification = "This method is meant to be caleld using a subclass as the reciever.")]
         public static MethodInfo Generate(DynamicMethodDefinition dmd, object? context = null)
-            => Postbuild((Instance ??= new TSelf()).GenerateCore(dmd, context));
+            => ((IDMDGenerator)Instance).Generate(dmd, context);
 
         internal static unsafe MethodInfo Postbuild(MethodInfo mi)
         {

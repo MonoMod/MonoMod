@@ -274,7 +274,7 @@ namespace MonoMod.UnitTest.Core
                 triple.System.PatchData(PatchTargetKind.Executable, fn, code, default);
                 Assert.Equal(expected, ((delegate* unmanaged[Cdecl]<int>)fn)());
 
-                var altEntry = triple.Architecture.AltEntryFactory.CreateAlternateEntrypoint(fn, minLength, out var altHandle);
+                var altEntry = triple.Architecture.AltEntryFactory.CreateAlternateEntrypoint(fn, fn, minLength, out var altHandle);
                 using (altHandle)
                 {
                     // Clobber the relocated prologue with returns, like a detour would. Anything that still runs it, rather than its
@@ -341,7 +341,7 @@ namespace MonoMod.UnitTest.Core
                 var fn = codeMem.BaseAddress;
                 triple.System.PatchData(PatchTargetKind.Executable, fn, code, default);
 
-                var altEntry = triple.Architecture.AltEntryFactory.CreateAlternateEntrypoint(fn, length, out var altHandle);
+                var altEntry = triple.Architecture.AltEntryFactory.CreateAlternateEntrypoint(fn, fn, length, out var altHandle);
                 using (altHandle)
                 {
                     var alt = new ReadOnlySpan<byte>((void*)altEntry, length + 14);

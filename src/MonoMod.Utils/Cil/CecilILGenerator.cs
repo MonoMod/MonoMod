@@ -287,10 +287,31 @@ namespace MonoMod.Utils.Cil
         }
 
         public override void EmitCall(SRE.OpCode opcode, MethodInfo methodInfo, Type[]? optionalParameterTypes) =>
-            Emit(IL.Create(CecilILGenerator._(opcode), _(methodInfo)));
+            Emit(IL.Create(_(opcode), _(methodInfo)));
 
         public override void EmitCalli(SRE.OpCode opcode, CallingConventions callingConvention, Type? returnType,
-            Type[]? parameterTypes, Type[]? optionalParameterTypes) => throw new NotSupportedException();
+            Type[]? parameterTypes, Type[]? optionalParameterTypes)
+        {
+            var cs = new CallSite(_(returnType ?? typeof(void)));
+            if (parameterTypes is not null)
+            {
+                foreach (var param in parameterTypes)
+                {
+                    cs.Parameters.Add(new(_(param)));
+                }
+            }
+            if (callingConvention.Has(CallingConventions.HasThis))
+            {
+                cs.HasThis = true;
+            }
+            if (callingConvention.Has(CallingConventions.ExplicitThis))
+            {
+                cs.ExplicitThis = true;
+            }
+            // TODO: other CallingConventions values?
+
+            Emit(IL.Create(_(opcode), cs));
+        }
 
         public override void EmitCalli(SRE.OpCode opcode, CallingConvention unmanagedCallConv, Type? returnType,
             Type[]? parameterTypes) => throw new NotSupportedException();

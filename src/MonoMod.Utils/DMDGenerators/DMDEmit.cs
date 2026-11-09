@@ -1,7 +1,4 @@
-﻿#if NETFRAMEWORK || NET9_0_OR_GREATER
-#define METHODBUILDER_SUPPORTED
-#endif
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Utils.Cil;
 using System;
@@ -9,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using MonoMod.Utils.DMDGenerators;
+
 #if METHODBUILDER_SUPPORTED
 using System.Diagnostics.SymbolStore;
 #endif
@@ -36,18 +35,24 @@ namespace MonoMod.Utils
             }
         }
 
-        public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il)
+        public static void Generate(DynamicMethodDefinition dmd, MethodBase _mb, ILGenerator il, GeneratedAssemblyReferenceHolder? refHolder)
         {
             var def = dmd.Definition ?? throw new InvalidOperationException();
             var dm = _mb as DynamicMethod;
 #if METHODBUILDER_SUPPORTED
             var mb = _mb as MethodBuilder;
+            var typeBuilder = mb?.DeclaringType as TypeBuilder;
             var moduleBuilder = mb?.Module as ModuleBuilder;
             // moduleBuilder.Assembly sometimes avoids the .Assembly override under mysterious circumstances.
-            var assemblyBuilder = (mb?.DeclaringType as TypeBuilder)?.Assembly as AssemblyBuilder;
+            var assemblyBuilder = typeBuilder?.Assembly as AssemblyBuilder;
             HashSet<Assembly>? accessChecksIgnored = null;
-            if (mb != null) {
+            if (mb != null)
+            {
                 accessChecksIgnored = new HashSet<Assembly>();
+            }
+            if (typeBuilder is not null)
+            {
+                Helpers.Assert(refHolder is not null);
             }
 #endif
 
@@ -148,7 +153,7 @@ namespace MonoMod.Utils
                         switch (handler.HandlerType)
                         {
                             case ExceptionHandlerType.Filter:
-                                il.BeginCatchBlock(null!); // This parameter should be null for filter blocks, even though the compiler doesn't thihnk so.
+                                il.BeginCatchBlock(null!); // This parameter should be null for filter blocks, even though the compiler doesn't think so.
                                 break;
                             case ExceptionHandlerType.Catch:
                                 il.BeginCatchBlock(handler.CatchType.ResolveReflection());
@@ -213,26 +218,7 @@ namespace MonoMod.Utils
                     }
                     else if (operand is MemberReference mref)
                     {
-                        var member = mref == def ? _mb : mref.ResolveReflection();
-                        operand = member;
-#if METHODBUILDER_SUPPORTED
-                        if (mb != null && member != null) {
-                            // See DMDGenerator.cs for the explanation of this forced .?
-                            var module = member.Module;
-                            if (module == null)
-                                continue;
-                            var asm = module.Assembly;
-                            if (asm != null && accessChecksIgnored is not null && assemblyBuilder is not null && !accessChecksIgnored.Contains(asm)) {
-                                // while (member.DeclaringType != null)
-                                //     member = member.DeclaringType;
-                                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, new object[] {
-                                    asm.GetName().Name!
-                                }));
-                                accessChecksIgnored.Add(asm);
-                            }
-                        }
-#endif
-
+                        operand = mref == def ? _mb : mref.ResolveReflection();
                     }
                     else if (operand is CallSite csite)
                     {
@@ -243,9 +229,11 @@ namespace MonoMod.Utils
                             continue;
                         }
 #if METHODBUILDER_SUPPORTED
-                        if (mb is not null) {
+                        if (mb is not null)
+                        {
                             operand = csite.ResolveReflection(mb.Module);
-                        } else
+                        }
+                        else
 #endif
                         {
                             throw new NotSupportedException();
@@ -253,14 +241,40 @@ namespace MonoMod.Utils
                     }
 
 #if METHODBUILDER_SUPPORTED
-                    if (mb != null && operand is MethodBase called && called.DeclaringType == null) {
+                    if (mb != null && operand is MethodBase called && called.DeclaringType == null)
+                    {
                         // "Global" methods (f.e. DynamicMethods) cannot be tokenized.
-                        if (opcode == Mono.Cecil.Cil.OpCodes.Call) {
-                            if (called is MethodInfo target && target.IsDynamicMethod()) {
+                        if (opcode == Mono.Cecil.Cil.OpCodes.Call)
+                        {
+                            // note: GetLdftnPtr doesn't work for DynamicMethods
+
+                            if (called is MethodInfo target && target.IsDynamicMethod())
+                            {
+                                // we need to 1. construct a delegate from the target, and 2. set up an invoke of it
+                                var (delTy, invoker) = DelegateTypeGenerator.GetDelegateType(MethodSignature.ForMethod(target));
+
+                                var del = target.CreateDelegate(delTy);
+
+                                Helpers.Assert(refHolder is not null);
+                                Helpers.Assert(typeBuilder is not null);
+                                var fld = typeBuilder.DefineField($"f{refHolder.RecordedFieldSets}", delTy, System.Reflection.FieldAttributes.Static);
+                                refHolder.AddStaticField(fld.Name, del);
+
+                                il.Emit(System.Reflection.Emit.OpCodes.Ldsfld, fld);
+                                opcode = Mono.Cecil.Cil.OpCodes.Call;
+                                operand = invoker;
+
+                                /*
                                 // This should be heavily optimizable.
                                 operand = _CreateMethodProxy(mb, target);
                                 // TODO: replace this with allocation of a reference and FastDelegateInvokers call, or similar invocation sequence
-                            } else {
+                                */
+                            }
+                            else
+                            {
+                                Helpers.Assert(refHolder is not null);
+                                refHolder.AddReference(called);
+
                                 var ptr = called.GetLdftnPointer();
                                 if (IntPtr.Size == 4)
                                     il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4, (int) ptr);
@@ -270,8 +284,21 @@ namespace MonoMod.Utils
                                 opcode = Mono.Cecil.Cil.OpCodes.Calli;
                                 operand = ((MethodReference) instr.Operand).ResolveReflectionSignature(mb.Module);
                             }
-                        } else {
+                        }
+                        else
+                        {
                             throw new NotSupportedException($"Unsupported global method operand on opcode {opcode.Name}");
+                        }
+                    }
+#endif
+
+#if METHODBUILDER_SUPPORTED
+                    if (mb != null && operand is MemberInfo member)
+                    {
+                        // Add IgnoresAccessChecksTo for everything relevant
+                        if (assemblyBuilder is not null && accessChecksIgnored is not null)
+                        {
+                            AddIgnoresAccessChecks(assemblyBuilder, accessChecksIgnored, member);
                         }
                     }
 #endif
@@ -301,6 +328,96 @@ namespace MonoMod.Utils
                 continue;
             }
         }
+
+#if METHODBUILDER_SUPPORTED
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, MemberInfo member)
+        {
+            switch (member)
+            {
+                case FieldInfo field:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, field);
+                    return;
+                case MethodBase method:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, method);
+                    return;
+                case Type type:
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, type);
+                    return;
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, FieldInfo field)
+        {
+            if (field.Module is { Assembly: { } asm })
+            {
+                if (ignored.Add(asm))
+                {
+                    assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(
+                        DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [asm.GetName().Name!]));
+                }
+            }
+
+            if (field.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.DeclaringType);
+            }
+
+            if (field.FieldType is not null)
+            {
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, field.FieldType);
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, MethodBase method)
+        {
+            if (method.Module is { Assembly: { } asm })
+            {
+                if (ignored.Add(asm))
+                {
+                    assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(
+                        DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [asm.GetName().Name!]));
+                }
+            }
+
+            if (method.DeclaringType is not null)
+            {
+                // we do this for generic parameters
+                AddIgnoresAccessChecks(assemblyBuilder, ignored, method.DeclaringType);
+            }
+
+            if (method.IsGenericMethod && !method.IsGenericMethodDefinition)
+            {
+                var types = method.GetGenericArguments();
+                foreach (var ty in types)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
+
+        private static void AddIgnoresAccessChecks(AssemblyBuilder assemblyBuilder, HashSet<Assembly> ignored, Type type)
+        {
+            if (type.IsGenericParameter)
+                return;
+
+            if (ignored.Add(type.Assembly))
+            {
+                assemblyBuilder.SetCustomAttribute(new CustomAttributeBuilder(
+                    DynamicMethodDefinition.c_IgnoresAccessChecksToAttribute, [type.Assembly.GetName().Name!]));
+            }
+
+            // do the same for any directly referenced type args
+            if (type.IsGenericType && !type.IsGenericTypeDefinition)
+            {
+                var typeArgs = type.GetGenericArguments();
+                foreach (var ty in typeArgs)
+                {
+                    AddIgnoresAccessChecks(assemblyBuilder, ignored, ty);
+                }
+            }
+        }
+#endif
 
         public static void ResolveWithModifiers(TypeReference typeRef, out Type type, out Type[] typeModReq, out Type[] typeModOpt, List<Type>? modReq = null, List<Type>? modOpt = null)
         {

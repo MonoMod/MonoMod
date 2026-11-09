@@ -236,17 +236,24 @@ namespace MonoMod.Core.Platforms.Runtimes
                         return result;
                     }
 
-                    if (hookEntrancy == 1)
+                    if (hookEntrancy == 1 && result == CorJitResult.CORJIT_OK)
                     {
-                        try
-                        {
-                            var rwEntry = stackallocWrapper[ICorJitInfoWrapper.HotCodeRW];
+                        // check JIT flags so we skip OSR compiles
+                        var isOsr = Runtime.GetJitFlagsOSR(corJitInfo);
 
-                            Runtime.CompileMethodHookPostCommon(methodInfo, nativeEntry, nativeSizeOfCode, rwEntry);
-                        }
-                        catch
+                        // skip invoking the hook for OSR compilation
+                        if (!isOsr)
                         {
-                            // eat the exception so we don't accidentally bubble up to native code
+                            try
+                            {
+                                var rwEntry = stackallocWrapper[ICorJitInfoWrapper.HotCodeRW];
+
+                                Runtime.CompileMethodHookPostCommon(methodInfo, nativeEntry, nativeSizeOfCode, rwEntry);
+                            }
+                            catch
+                            {
+                                // eat the exception so we don't accidentally bubble up to native code
+                            }
                         }
                     }
 
@@ -341,6 +348,15 @@ namespace MonoMod.Core.Platforms.Runtimes
                 if (jit == IntPtr.Zero)
                     return res;
 
+                // check JIT flags so we skip OSR compiles
+                var isOsr = Runtime.GetJitFlagsOSR(corJitInfo);
+
+                // skip invoking the hook for OSR compilation
+                if (isOsr)
+                {
+                    return res;
+                }
+
                 try
                 {
                     // To avoid the performance implications of having both a Pre and Post hook method, we defer the allocMem patching until the first post hook invocation.
@@ -392,6 +408,9 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         protected virtual int VtableIndexICorJitInfoAllocMem => V60.ICorJitInfoVtable.AllocMemIndex;
         protected virtual int ICorJitInfoFullVtableCount => V60.ICorJitInfoVtable.TotalVtableCount;
+        protected override int VtableIndexICorJitInfoGetJitFlags => V60.ICorJitInfoVtable.GetJitFlagsIndex;
+        protected override int CORJIT_FLAG_OSR => 13;
+        protected override int SizeofCORJIT_FLAG => 16;
 
         protected virtual InvokeAllocMemPtr InvokeAllocMemPtr => V60.InvokeAllocMemPtr;
 
@@ -480,5 +499,29 @@ namespace MonoMod.Core.Platforms.Runtimes
             return ptr;
         }
 #endif
+
+        protected override unsafe bool TryGetNonStubMethodHandle(RuntimeMethodHandle handle, out RuntimeMethodHandle outHandle)
+        {
+            // ensure we don't accidentally try to use this on a runtime it's not meant for
+            if (GetType() != typeof(Core60Runtime))
+            {
+                return base.TryGetNonStubMethodHandle(handle, out outHandle);
+            }
+
+            var md = (V60.MethodDesc*)handle.Value;
+
+            if (md->IsUnboxingStub)
+            {
+                md = V60.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+                outHandle = JitHookHelpers.CreateHandleForHandlePointer((IntPtr)md);
+                return true;
+            }
+            else
+            {
+                // not an unboxing stub, we still return true so we don't need to do extra logic
+                outHandle = handle;
+                return true;
+            }
+        }
     }
 }

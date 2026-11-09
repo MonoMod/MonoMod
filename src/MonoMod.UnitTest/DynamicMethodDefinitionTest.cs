@@ -8,12 +8,14 @@ using New::MonoMod.RuntimeDetour;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using Xunit;
 using Xunit.Abstractions;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
+using ReflOpCodes = System.Reflection.Emit.OpCodes;
 
 namespace MonoMod.UnitTest
 {
@@ -321,13 +323,13 @@ namespace MonoMod.UnitTest
                 var il4 = dmd4.GetILGenerator();
                 il4.Emit(System.Reflection.Emit.OpCodes.Ret);
 
-                var methodBuilder = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd, typeBuilder);
+                var methodBuilder = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd, typeBuilder, out _);
                 Assert.NotNull(methodBuilder);
-                var methodBuilder2 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd2, typeBuilder);
+                var methodBuilder2 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd2, typeBuilder, out _);
                 Assert.NotNull(methodBuilder2);
-                var methodBuilder3 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
+                var methodBuilder3 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder, out _);
                 Assert.NotNull(methodBuilder3);
-                var methodBuilder4 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder);
+                var methodBuilder4 = DMDEmitMethodBuilderGenerator.GenerateMethodBuilder(dmd3, typeBuilder, out _);
                 Assert.NotNull(methodBuilder4);
 
                 var generatedType = typeBuilder.CreateType();
@@ -345,6 +347,7 @@ namespace MonoMod.UnitTest
             }
             Console.WriteLine("TestSaveDMDEmitMethodBuilderGenerator Finished");
         }
+
 #endif
 #if NETSTANDARD2_1 || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
         [Fact]
@@ -381,5 +384,157 @@ namespace MonoMod.UnitTest
             return value + 41;
         }
 #endif
+
+        private static DynamicMethod AddOneDM()
+        {
+            var dm = new DynamicMethod("AddOne", typeof(int), [typeof(int)], typeof(DynamicMethodDefinitionTest), true);
+            var il = dm.GetILGenerator();
+            il.Emit(ReflOpCodes.Ldarg_0);
+            il.Emit(ReflOpCodes.Ldc_I4_1);
+            il.Emit(ReflOpCodes.Add);
+            il.Emit(ReflOpCodes.Ret);
+            return dm;
+        }
+
+        [Fact]
+        public void CallDynamicMethodWithSpanParameter()
+        {
+            var dm = new DynamicMethod("SpanLength", typeof(int), [typeof(Span<int>)], typeof(DynamicMethodDefinitionTest), true);
+            var dmil = dm.GetILGenerator();
+            dmil.Emit(ReflOpCodes.Ldc_I4_7);
+            dmil.Emit(ReflOpCodes.Ret);
+
+            using var dmd = new DynamicMethodDefinition("CallSpanLength", typeof(int), []);
+            var span = new Mono.Cecil.Cil.VariableDefinition(dmd.Module.ImportReference(typeof(Span<int>)));
+            dmd.Definition.Body.Variables.Add(span);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldloca, span);
+            il.Emit(OpCodes.Initobj, dmd.Module.ImportReference(typeof(Span<int>)));
+            il.Emit(OpCodes.Ldloc, span);
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(dm));
+            il.Emit(OpCodes.Ret);
+
+            Assert.Equal(7, DMDCecilGenerator.Generate(dmd).Invoke(null, null));
+        }
+
+#if NETFRAMEWORK || NET9_0_OR_GREATER
+        [Fact]
+        public void MethodBuilderGeneratorCallsDynamicMethod()
+        {
+            using var dmd = new DynamicMethodDefinition("CallAddOne", typeof(int), [typeof(int)]);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(AddOneDM()));
+            il.Emit(OpCodes.Ret);
+
+            Assert.Equal(42, DMDEmitMethodBuilderGenerator.Generate(dmd).Invoke(null, [41]));
+        }
+#endif
+
+        [Fact]
+        public void CecilGeneratorCallsDynamicMethodAtBranchTarget()
+        {
+            // int CallAddOne(int x) => AddOne(x != 0 ? 41 : 9);
+            using var dmd = new DynamicMethodDefinition("CallAddOne", typeof(int), [typeof(int)]);
+            var il = dmd.GetILProcessor();
+            var call = il.Create(OpCodes.Call, dmd.Module.ImportReference(AddOneDM()));
+            var isTrue = il.Create(OpCodes.Ldc_I4, 41);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Brtrue, isTrue);
+            il.Emit(OpCodes.Ldc_I4, 9);
+            il.Emit(OpCodes.Br, call);
+            il.Append(isTrue);
+            il.Append(call);
+            il.Emit(OpCodes.Ret);
+            var method = DMDCecilGenerator.Generate(dmd);
+
+            Assert.Equal(42, method.Invoke(null, [1]));
+            Assert.Equal(10, method.Invoke(null, [0]));
+        }
+
+        [Fact]
+        public void DmdIgnoresAccessChecksForGenericArgs()
+        {
+            using var dmd = new DynamicMethodDefinition("IACTGenerics", typeof(List<PrivateType>), []);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Newobj, dmd.Module.ImportReference(typeof(List<PrivateType>).GetConstructor([])!));
+            il.Emit(OpCodes.Ret);
+
+            using var dmd2 = new DynamicMethodDefinition(dmd);
+            using var dmd3 = new DynamicMethodDefinition(dmd);
+
+            var method1 = DMDCecilGenerator.Generate(dmd);
+            _ = Assert.IsType<List<PrivateType>>(method1.Invoke(null, []));
+
+            var method2 = DMDEmitDynamicMethodGenerator.Generate(dmd2);
+            _ = Assert.IsType<List<PrivateType>>(method2.Invoke(null, []));
+
+#if NETFRAMEWORK || NET9_0_OR_GREATER
+            var method3 = DMDEmitMethodBuilderGenerator.Generate(dmd3);
+            _ = Assert.IsType<List<PrivateType>>(method3.Invoke(null, []));
+#endif
+        }
+
+        [SuppressMessage("", "CA1812", Justification = "It's not supposed to be instantiated; its functionally a marker type.")]
+        private sealed class PrivateType { }
+
+
+
+        private static DynamicMethod Dm(Type ret, Type[] args, Action<ILGenerator> body)
+        {
+            var dm = new DynamicMethod("Target", ret, args, typeof(DynamicMethodDefinitionTest), true);
+            body(dm.GetILGenerator());
+            return dm;
+        }
+
+//#if NETCOREAPP2_1_OR_GREATER
+        private ref struct Collide_Inner
+        {
+            public int X;
+        }
+
+        private static class Collide
+        {
+            public ref struct Inner
+            {
+                public int X;
+            }
+        }
+
+        // 8. Delegate type names can collide: SanitizeTypeName maps '.', '+', '_' etc. all to '_', so Collide_Inner and Collide.Inner
+        // get the same type and assembly name, and the name based AssemblyResolve hands back the first assembly
+        // ("Object of type X cannot be converted to type X"). Fails on net8, passes on net9+ only because the dynamic
+        // assembly path falls back to Cecil with a different assembly name. Two threads creating the same key at once
+        // (GetOrAdd runs the factory twice) end up the same way.
+        // Fix: unique names (counter/guid) for the type and the assembly.
+        [Fact]
+        public void CallDynamicMethodsWithSimilarlyNamedRefStructs()
+        {
+            Assert.Equal(1, CallWithRefStruct(typeof(Collide_Inner), 1));
+            Assert.Equal(2, CallWithRefStruct(typeof(Collide.Inner), 2));
+        }
+
+        private static object? CallWithRefStruct(Type refStruct, int value)
+        {
+            var dm = Dm(typeof(int), [refStruct], il =>
+            {
+                il.Emit(ReflOpCodes.Ldc_I4, value);
+                il.Emit(ReflOpCodes.Ret);
+            });
+
+            using var dmd = new DynamicMethodDefinition("CallRefStruct", typeof(int), []);
+            var local = new Mono.Cecil.Cil.VariableDefinition(dmd.Module.ImportReference(refStruct));
+            dmd.Definition.Body.Variables.Add(local);
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldloca, local);
+            il.Emit(OpCodes.Initobj, dmd.Module.ImportReference(refStruct));
+            il.Emit(OpCodes.Ldloc, local);
+            il.Emit(OpCodes.Call, dmd.Module.ImportReference(dm));
+            il.Emit(OpCodes.Ret);
+            return DMDCecilGenerator.Generate(dmd).Invoke(null, null);
+        }
+//#endif
+
+
     }
 }

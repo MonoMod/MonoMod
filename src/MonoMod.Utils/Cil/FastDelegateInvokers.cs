@@ -17,14 +17,45 @@ namespace MonoMod.Cil
 
     public static partial class FastDelegateInvokers
     {
-        private static readonly (MethodInfo, Type)[] invokers = GetInvokers();
+        internal static readonly (MethodInfo, Type)[] Invokers = GetInvokers();
 
-        private const int MaxFastInvokerParams = 16;
+        internal const int MaxFastInvokerParams = 16;
 
         [GetFastDelegateInvokersArray(MaxFastInvokerParams)]
         private static partial (MethodInfo, Type)[] GetInvokers();
 
-        private static (MethodInfo Invoker, Type Delegate)? TryGetInvokerForSig(MethodSignature sig)
+        internal static int EncodeIndex(bool retNotVoid, bool firstParamIsByRef, int parameterCount)
+        {
+            var index = 0;
+            index |= retNotVoid ? 0b01 : 0b00;
+            index |= firstParamIsByRef ? 0b10 : 0b00;
+            index |= (parameterCount - 1) << 2;
+            return index;
+        }
+
+        internal static (MethodInfo Invoker, Type Delegate)? TryGetBuiltinInvokerForSig(MethodSignature sig)
+        {
+            if (TryGetBuiltinInvokerForSigNoConstruct(sig) is not (var invoker, var del, var index))
+                return null;
+
+            var typeParams = new Type[sig.ParameterCount + (index & 1)];
+            // first param is always return type, if present
+            var i = 0;
+            if ((index & 1) != 0)
+                typeParams[i++] = sig.ReturnType;
+            foreach (var p in sig.Parameters)
+            {
+                var t = p;
+                if (t.IsByRef)
+                    t = t.GetElementType()!;
+                typeParams[i++] = t;
+            }
+            Helpers.Assert(i == typeParams.Length);
+
+            return (invoker.MakeGenericMethod(typeParams), del.MakeGenericType(typeParams));
+        }
+
+        internal static (MethodInfo Invoker, Type Delegate, int index)? TryGetBuiltinInvokerForSigNoConstruct(MethodSignature sig)
         {
             // if the signature doesn't take any arguments, we don't need an invoker in the first place
             if (sig.ParameterCount == 0)
@@ -53,28 +84,10 @@ namespace MonoMod.Cil
             if (sig.Parameters.Skip(1).Any(t => t.IsByRef || t.IsByRefLike()))
                 return null;
 
-            var index = 0;
-            index |= sig.ReturnType != typeof(void) ? 0b01 : 0b00;
-            index |= sig.FirstParameter.IsByRef ? 0b10 : 0b00;
-            index |= (sig.ParameterCount - 1) << 2;
+            var index = EncodeIndex(sig.ReturnType != typeof(void), sig.FirstParameter.IsByRef, sig.ParameterCount);
 
-            var (invoker, del) = invokers[index];
-
-            var typeParams = new Type[sig.ParameterCount + (index & 1)];
-            // first param is always return type, if present
-            var i = 0;
-            if ((index & 1) != 0)
-                typeParams[i++] = sig.ReturnType;
-            foreach (var p in sig.Parameters)
-            {
-                var t = p;
-                if (t.IsByRef)
-                    t = t.GetElementType()!;
-                typeParams[i++] = t;
-            }
-            Helpers.Assert(i == typeParams.Length);
-
-            return (invoker.MakeGenericMethod(typeParams), del.MakeGenericType(typeParams));
+            var (invoker, del) = Invokers[index];
+            return (invoker, del, index);
         }
 
         private static readonly ConditionalWeakTable<Type, Tuple<MethodInfo?, Type>> invokerCache = new();
@@ -95,7 +108,7 @@ namespace MonoMod.Cil
                     return new(null, delegateType);
                 }
 
-                var builtinInvoker = TryGetInvokerForSig(sig);
+                var builtinInvoker = TryGetBuiltinInvokerForSig(sig);
                 if (builtinInvoker is { } p)
                 {
                     return new(p.Invoker, p.Delegate);

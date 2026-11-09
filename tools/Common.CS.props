@@ -36,17 +36,20 @@
     <NoWarn>$(NoWarn);CA1003</NoWarn> <!-- Change event to use EventHandler<EventArgs> -->
     <NoWarn>$(NoWarn);CA2020</NoWarn> <!-- Starting with .NET 7, conversions with IntPtr don't throw in an unchecked context -->
     <NoWarn>$(NoWarn);CA1303</NoWarn> <!-- Use resource tables for strings passed to Console.WriteLine -->
+    <NoWarn>$(NoWarn);CA1711</NoWarn> <!-- Identifiers should not have incorrect suffix -->
 
     <NewCecilVersion>0.11.6</NewCecilVersion>
     <OldCecilVersion>0.10.4</OldCecilVersion>
     
-    <RoslynVersion>5.0.0-2.final</RoslynVersion>
-    <MSBuildRequiredVersion>17.12.6</MSBuildRequiredVersion>
+    <RoslynVersion>5.3.0</RoslynVersion>
+    <MSBuildRequiredVersion>18.0.0</MSBuildRequiredVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- We want to remove JSImportGenerator by default, becuase it takes a good deal of compilation time -->
     <RemoveAnalyzer Include="Microsoft.Interop.JavaScript.JSImportGenerator" />
+    <!-- Similarly, we can't use the Regex generator -->
+    <RemoveAnalyzer Include="System.Text.RegularExpressions.Generator" />
   </ItemGroup>
   
   <ItemGroup Condition="'$(MMReferenceSourcePkgs)' == 'true'">
