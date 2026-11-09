@@ -175,5 +175,8 @@ jobs:
     if: ${{ needs.setup.outputs.upload_pkgs == 'true' && github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
     name: Upload Packages
     uses: ./.github/workflows/upload-packages.yml
+    permissions:
+      contents: read
+      packages: write
     with:
       run-id: ${{ needs.setup.outputs.should_skip == 'true' && fromJSON(needs.setup.outputs.skipped_by).id || github.run_id }}

@@ -144,6 +144,9 @@ jobs:
     if: '!inputs.dryrun'
     name: Upload Packages (GitHub)
     uses: ./.github/workflows/upload-packages.yml
+    permissions:
+      contents: read
+      packages: write
     with:
       run-id: ${{ github.run_id }}
 
@@ -151,12 +154,15 @@ jobs:
     needs: [setup, build-testassets, test]
     if: '!inputs.dryrun'
     name: Upload Packages (NuGet)
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/upload-packages.yml
     with:
       run-id: ${{ github.run_id }}
-      nuget-url: nuget.org
-    secrets:
-      nuget-key: ${{ secrets.NUGET_PUSH_KEY }}
+      publish-to-nuget-org: true
+      # Set NUGET_USER and register make_release.yml in NuGet.org Trusted Publishing (no environment).
+      nuget-user: ${{ vars.NUGET_USER }}
 
   bump-ver:
     name: Bump versions
