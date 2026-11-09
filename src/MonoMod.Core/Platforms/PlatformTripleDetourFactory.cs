@@ -516,6 +516,8 @@ namespace MonoMod.Core.Platforms
             private IDisposable? srcPin;
             private IDisposable? dstPin;
 
+            private bool walked;
+
             public OrdinaryManagedDetourBox(PlatformTripleDetourFactory factory,
                 MethodBase srcMethod, RuntimeMethodHandle srcMethodHandle,
                 MethodBase origDstMethod,
@@ -534,6 +536,7 @@ namespace MonoMod.Core.Platforms
 
                 Triple.Compile(SrcMethod, SrcMethodHandle);
                 var from = Triple.GetNativeMethodBody(SrcMethod, SrcMethodHandle);
+                walked = true;
                 Triple.Compile(RealDstMethod, RealDstMethodHandle);
                 var to = RealDstMethodHandle.GetFunctionPointer();
 
@@ -562,7 +565,7 @@ namespace MonoMod.Core.Platforms
                 Justification = "We don't want to bubble exceptions out of here, since we're running cooperatively with other handlers")]
             public override void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, nint codeStart, nint codeRw, ulong codeSize)
             {
-                if (!IsApplied)
+                if (!IsApplied && !walked)
                 {
                     return;
                 }
@@ -687,6 +690,9 @@ namespace MonoMod.Core.Platforms
 
             private readonly List<object> keepAlives = new();
 
+            private bool normalWalked;
+            private bool asyncWalked;
+
             public AsyncManagedDetourBox(
                 PlatformTripleDetourFactory factory,
                 MethodBase src, RuntimeAsyncMethodInfo srcAsyncInfo,
@@ -742,6 +748,7 @@ namespace MonoMod.Core.Platforms
                 // need to detour the normal variant
                 Triple.Compile(SrcMethod, SrcAsyncInfo.NormalVariant);
                 var normalFrom = Triple.GetNativeMethodBody(SrcMethod, SrcAsyncInfo.NormalVariant);
+                normalWalked = true;
 
                 Triple.Compile(NormalRealDst, NormalRealDstHandle);
                 var normalTo = NormalRealDstHandle.GetFunctionPointer();
@@ -761,6 +768,7 @@ namespace MonoMod.Core.Platforms
                 var (realTarget, realHandle) = BuildNewAsyncVariantTarget(out var realTargetSlot);
                 Triple.Compile(SrcMethod, SrcAsyncInfo.AsyncVariant);
                 var asyncFrom = Triple.GetNativeMethodBody(SrcMethod, SrcAsyncInfo.AsyncVariant);
+                asyncWalked = true;
 
                 Triple.Compile(realTarget, realHandle);
                 var asyncTo = realHandle.GetFunctionPointer();
@@ -792,7 +800,7 @@ namespace MonoMod.Core.Platforms
                 Justification = "We don't want to bubble exceptions out of here, since we're running cooperatively with other handlers")]
             public override unsafe void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, IntPtr codeStart, IntPtr codeRw, ulong codeSize)
             {
-                if (!IsApplied)
+                if (!IsApplied && !(handle == SrcAsyncInfo.AsyncVariant ? asyncWalked : normalWalked))
                 {
                     return;
                 }
