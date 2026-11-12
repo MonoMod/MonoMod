@@ -42,6 +42,10 @@ namespace MonoMod.Core.Interop
         // clrfeatures.cmake: if (FEATURE_DYNAMIC_CODE_COMPILED) set(FEATURE_TIERED_COMPILATION 1)
         public static readonly bool FEATURE_TIERED_COMPILATION = !PlatformDetection.OS.Is(OSKind.IOS);
 
+        // clrdefinitions.cmake: if (FEATURE_TIERED_COMPILATION OR FEATURE_REJIT OR FEATURE_METADATA_UPDATER)
+        // clrfeatures.cmake sets FEATURE_REJIT together with FEATURE_TIERED_COMPILATION.
+        public static readonly bool FEATURE_CODE_VERSIONING = FEATURE_TIERED_COMPILATION || FEATURE_METADATA_UPDATER;
+
         // inc/switches.h: defined on TARGET_64BIT if FEATURE_TIERED_COMPILATION
         public static readonly bool FEATURE_ON_STACK_REPLACEMENT = TARGET_64BIT && FEATURE_TIERED_COMPILATION;
 

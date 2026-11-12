@@ -12,8 +12,11 @@ using DWORD = uint;
 using int16_t = short;
 using mdMethodDef = uint;
 using NativeCodeSlot = nuint; // MethodDesc::NativeCodeSlot (vm/method.hpp:2341)
+using NativeCodeVersionId = uint; // vm/codeversion.h:13
 using NonVtableSlot = nuint; // MethodDesc::NonVtableSlot (vm/method.hpp:2339)
+using OptimizationTier = int; // enum NativeCodeVersion::OptimizationTier (vm/codeversion.h:77)
 using PCODE = nuint;
+using ReJITID = nuint; // inc/corprof.idl:137
 using TADDR = nuint;
 using uint16_t = ushort;
 using UINT16 = ushort;
@@ -444,43 +447,66 @@ namespace MonoMod.Core.Interop
             public const WORD mdfSynchronized = 0x4000;
             public const WORD mdfIsIntrinsic = 0x8000;
 
-            // vm/method.hpp:274
-            public struct MethodDescCodeData
+            // vm/method.hpp:274 (only the member used here)
+            [CppStruct]
+            public partial struct MethodDescCodeData
             {
-                public MethodDescVersioningState* VersioningState;
-            }
-
-            // vm/codeversion.h:505
-            public struct MethodDescVersioningState
-            {
-                public const BYTE IsDefaultVersionActiveChildFlag = 0x4;
-
-                public MethodDesc* m_pMethodDesc;
-                public BYTE m_flags;
-                public DWORD m_nextId;
-                public NativeCodeVersionNode* m_pFirstVersionNode;
+                [CppIf("FEATURE_CODE_VERSIONING")]
+                public partial ref MethodDescVersioningState* VersioningState { get; }
             }
 
             // vm/codeversion.h:273
             [CppStruct]
             public partial struct NativeCodeVersionNode
             {
+                // vm/codeversion.h:334
                 public const DWORD IsActiveChildFlag = 1;
 
                 public partial ref PCODE m_pNativeCode { get; }
                 public partial ref MethodDesc* m_pMethodDesc { get; }
-                public partial ref nuint m_parentId { get; }
+                public partial ref ReJITID m_parentId { get; }
                 public partial ref NativeCodeVersionNode* m_pNextMethodDescSibling { get; }
-                public partial ref DWORD m_id { get; }
+                public partial ref NativeCodeVersionId m_id { get; }
                 [CppIf("FEATURE_TIERED_COMPILATION")]
-                public partial ref DWORD m_optTier { get; }
+                public partial ref OptimizationTier m_optTier { get; }
                 [CppIf("HAVE_GCCOVER")]
                 public partial ref GCCoverageInfo* m_gcCover { get; }
                 [CppIf("FEATURE_ON_STACK_REPLACEMENT")]
-                public partial ref void* m_patchpointInfo { get; }
+                public partial ref PatchpointInfo* m_patchpointInfo { get; }
                 [CppIf("FEATURE_ON_STACK_REPLACEMENT")]
-                public partial ref DWORD m_ilOffset { get; }
+                public partial ref uint m_ilOffset { get; }
                 public partial ref DWORD m_flags { get; }
+
+                // vm/codeversion.cpp:85
+                public PCODE GetNativeCode() => m_pNativeCode;
+
+                // vm/codeversion.cpp:91
+                public ReJITID GetILVersionId() => m_parentId;
+
+                // vm/codeversion.cpp:119
+                public bool IsActiveChildVersion() => (m_flags & IsActiveChildFlag) != 0;
+            }
+
+            // inc/patchpointinfo.h:28 (contents not needed)
+            public struct PatchpointInfo { }
+
+            // vm/codeversion.h:505
+            public struct MethodDescVersioningState
+            {
+                public MethodDesc* m_pMethodDesc;
+
+                // vm/codeversion.h:527
+                public const BYTE IsDefaultVersionActiveChildFlag = 0x4;
+
+                public BYTE m_flags;
+                public NativeCodeVersionId m_nextId;
+                public NativeCodeVersionNode* m_pFirstVersionNode;
+
+                // vm/codeversion.cpp:1289
+                public NativeCodeVersionNode* GetFirstVersionNode() => m_pFirstVersionNode;
+
+                // vm/codeversion.cpp:1295
+                public bool IsDefaultVersionActiveChild() => (m_flags & IsDefaultVersionActiveChildFlag) != 0;
             }
 
             // vm/method.hpp:290
@@ -883,6 +909,15 @@ namespace MonoMod.Core.Interop
                     return size;
                 }
 
+                // vm/method.cpp:329
+                public MethodDescVersioningState* GetMethodDescVersionState()
+                {
+                    var codeData = m_codeData;
+                    if (codeData == null)
+                        return null;
+                    return codeData->VersioningState;
+                }
+
                 // vm/method.cpp:586
                 public PCODE GetMethodEntryPointIfExists()
                 {
@@ -1152,6 +1187,26 @@ namespace MonoMod.Core.Interop
                     variantIsThunk = pAsyncOtherVariant != null && pAsyncOtherVariant->IsAsyncThunkMethod();
 
                     return pAsyncOtherVariant;
+                }
+
+                // vm/codeversion.cpp:833 ILCodeVersion::GetActiveNativeCodeVersion
+                //
+                // Ported for the default IL code version, with NativeCodeVersionIterator inlined.
+                public static PCODE GetActiveNativeCodeVersion(MethodDesc* pClosedMethodDesc)
+                {
+                    if (!FEATURE_CODE_VERSIONING)
+                        return pClosedMethodDesc->GetNativeCode();
+
+                    var pMethodDescVersioningState = pClosedMethodDesc->GetMethodDescVersionState();
+                    if (pMethodDescVersioningState == null || pMethodDescVersioningState->IsDefaultVersionActiveChild())
+                        return pClosedMethodDesc->GetNativeCode();
+
+                    for (var pNode = pMethodDescVersioningState->GetFirstVersionNode(); pNode != null; pNode = pNode->m_pNextMethodDescSibling)
+                    {
+                        if (pNode->GetILVersionId() == 0 && pNode->IsActiveChildVersion())
+                            return pNode->GetNativeCode();
+                    }
+                    return 0;
                 }
             }
 
