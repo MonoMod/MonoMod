@@ -444,8 +444,44 @@ namespace MonoMod.Core.Interop
             public const WORD mdfSynchronized = 0x4000;
             public const WORD mdfIsIntrinsic = 0x8000;
 
-            // vm/method.hpp:274 (contents not needed)
-            public struct MethodDescCodeData { }
+            // vm/method.hpp:274
+            public struct MethodDescCodeData
+            {
+                public MethodDescVersioningState* VersioningState;
+            }
+
+            // vm/codeversion.h:505
+            public struct MethodDescVersioningState
+            {
+                public const BYTE IsDefaultVersionActiveChildFlag = 0x4;
+
+                public MethodDesc* m_pMethodDesc;
+                public BYTE m_flags;
+                public DWORD m_nextId;
+                public NativeCodeVersionNode* m_pFirstVersionNode;
+            }
+
+            // vm/codeversion.h:273
+            [CppStruct]
+            public partial struct NativeCodeVersionNode
+            {
+                public const DWORD IsActiveChildFlag = 1;
+
+                public partial ref PCODE m_pNativeCode { get; }
+                public partial ref MethodDesc* m_pMethodDesc { get; }
+                public partial ref nuint m_parentId { get; }
+                public partial ref NativeCodeVersionNode* m_pNextMethodDescSibling { get; }
+                public partial ref DWORD m_id { get; }
+                [CppIf("FEATURE_TIERED_COMPILATION")]
+                public partial ref DWORD m_optTier { get; }
+                [CppIf("HAVE_GCCOVER")]
+                public partial ref GCCoverageInfo* m_gcCover { get; }
+                [CppIf("FEATURE_ON_STACK_REPLACEMENT")]
+                public partial ref void* m_patchpointInfo { get; }
+                [CppIf("FEATURE_ON_STACK_REPLACEMENT")]
+                public partial ref DWORD m_ilOffset { get; }
+                public partial ref DWORD m_flags { get; }
+            }
 
             // vm/method.hpp:290
             public enum AsyncVariantLookup

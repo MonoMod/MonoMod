@@ -63,6 +63,18 @@ namespace MonoMod.Core.Platforms.Runtimes
 
             md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
 
+            var versioningState = md->m_codeData != null ? md->m_codeData->VersioningState : null;
+            if (versioningState != null && (versioningState->m_flags & V110.MethodDescVersioningState.IsDefaultVersionActiveChildFlag) == 0)
+            {
+                for (var node = versioningState->m_pFirstVersionNode; node != null; node = node->m_pNextMethodDescSibling)
+                {
+                    if (node->m_parentId == 0 && (node->m_flags & V110.NativeCodeVersionNode.IsActiveChildFlag) != 0)
+                    {
+                        return (nint)node->m_pNativeCode;
+                    }
+                }
+            }
+
             var ptr = (nint)md->GetNativeCode();
 
             return ptr;
