@@ -63,7 +63,7 @@ namespace MonoMod.Core.Platforms.Runtimes
 
             md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
 
-            var ptr = (nint)md->GetNativeCode();
+            var ptr = (nint)V110.MethodDesc.GetActiveNativeCodeVersion(md);
 
             return ptr;
         }

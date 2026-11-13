@@ -58,6 +58,16 @@ namespace MonoMod.Core.Platforms.Architectures
                         // int 3
                         0xcc),
 
+                    // .NET Core Tiered Compilation thunk
+                    // https://github.com/dotnet/runtime/blob/70ae3df4a6f3c92fb6b315afc405edd10ff38579/src/coreclr/vm/i386/cgencpu.h#L624-L639
+                    new(new(AddressKind.Rel32, 14), mustMatchAtStart: true,
+                        // mov eax, {pRemainingCallCountCell}
+                        0xb8, An, An, An, An,
+                        // dec word [eax]
+                        0x66, 0xff, 0x08,
+                        // jne {DELTA}
+                        0x0f, 0x85, Ad, Ad, Ad, Ad),
+
                     // .NET 7 FixupPrecode (main entry point)
                     new(new(AddressKind.Abs32 | AddressKind.Indirect), mustMatchAtStart: true,
                         // jmp dword [pTarget]
@@ -74,6 +84,21 @@ namespace MonoMod.Core.Platforms.Architectures
                         0xa1, An, An, An, An,
                         // jmp dword [pPrecodeFixupThunk]
                         0xff, 0x25, Ad, Ad, Ad, Ad
+                    ),
+
+                    // .NET 7 Call Counting stub
+                    // https://github.com/dotnet/runtime/blob/d099f075e45d2aa6007a22b71b45a08758559f80/src/coreclr/vm/i386/thunktemplates.asm#L48-L58
+                    new(new(AddressKind.Abs32 | AddressKind.Indirect), mustMatchAtStart: true,
+                        // mov eax, dword [pRemainingCallCountCell]
+                        0xa1, An, An, An, An,
+                        // dec word [eax]
+                        0x66, 0xff, 0x08,
+                        // je trigger_recomp
+                        0x74, 0x06,
+                        // jmp dword [pTargetForMethod]
+                        0xff, 0x25, Ad, Ad, Ad, Ad,
+                        // trigger_recomp: jmp dword [pTargetForThresholdReached]
+                        0xff, 0x25, An, An, An, An
                     ),
 
                     null
