@@ -11,6 +11,13 @@ on:
         type: string
         default: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
         description: URL of the nuget feed to upload to
+      publish-to-nuget-org:
+        type: boolean
+        default: false
+        description: Publish to NuGet.org using trusted publishing instead of nuget-url
+      nuget-user:
+        type: string
+        description: NuGet.org account username used for trusted publishing
     secrets:
       nuget-key:
         required: false
@@ -32,9 +39,6 @@ jobs:
       VersionSuffix: ${{ !inputs.no-suffix && format('daily.{0}', inputs.version) }}
       DoNotAddSuffix: ${{ inputs.no-suffix && '1' }}
       ContinuousIntegrationBuild: true
-    permissions:
-      contents: read
-      packages: write
     steps:
     - name: Configure git
       run: |
@@ -85,5 +89,20 @@ jobs:
         github-token: ${{ github.token }}
         run-id: ${{ inputs.run-id }}
 
+    - name: NuGet Login
+      if: ${{ inputs.publish-to-nuget-org }}
+      id: nuget-login
+      uses: NuGet/login@v1.2.0
+      with:
+        user: ${{ inputs.nuget-user }}
+
     - name: Push packages
-      run: dotnet nuget push -s "${{ inputs.nuget-url }}" -k ${{ secrets.nuget-key || github.token }} --skip-duplicate (Get-Item artifacts/package/release/*.nupkg)
+      env:
+        NUGET_SOURCE: ${{ inputs.publish-to-nuget-org && 'https://api.nuget.org/v3/index.json' || inputs.nuget-url }}
+        NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        FEED_API_KEY: ${{ secrets.nuget-key || github.token }}
+      run: |
+        if ('${{ inputs.publish-to-nuget-org }}' -eq 'false') {
+          $env:NUGET_API_KEY = $env:FEED_API_KEY
+        }
+        dotnet nuget push -s "$env:NUGET_SOURCE" -k "$env:NUGET_API_KEY" --skip-duplicate (Get-Item artifacts/package/release/*.nupkg)
