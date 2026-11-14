@@ -79,9 +79,10 @@ namespace MonoMod.Utils
         /// </summary>
         /// <param name="bo">The original method body.</param>
         /// <param name="m">The method which will own the newly cloned method body.</param>
+        /// <param name="resolveDebugInformation">If we need to resolve debug infomation, false for patched methodbody</param>
         /// <returns>A clone of the original method body.</returns>
         [return: NotNullIfNotNull("bo")]
-        public static MethodBody? Clone(this MethodBody? bo, MethodDefinition m)
+        public static MethodBody? Clone(this MethodBody? bo, MethodDefinition m, bool resolveDebugInformation = true)
         {
             Helpers.ThrowIfArgumentNull(m);
 
@@ -120,46 +121,49 @@ namespace MonoMod.Utils
                 return c;
             }));
 
-            Instruction ResolveInstrOff(int off)
+            if (resolveDebugInformation)
             {
-                // Can't check cloned instruction offsets directly, as those can change for some reason
-                for (var i = 0; i < bo.Instructions.Count; i++)
-                    if (bo.Instructions[i].Offset == off)
-                        return bc.Instructions[i];
-                throw new ArgumentException($"Invalid instruction offset {off}");
+                Instruction ResolveInstrOff(int off)
+                {
+                    // Can't check cloned instruction offsets directly, as those can change for some reason
+                    for (var i = 0; i < bo.Instructions.Count; i++)
+                        if (bo.Instructions[i].Offset == off)
+                            return bc.Instructions[i];
+                    throw new ArgumentException($"Invalid instruction offset {off}");
+                }
+
+                m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations.Select(o =>
+                {
+                    if (o is AsyncMethodBodyDebugInformation ao)
+                    {
+                        var c = new AsyncMethodBodyDebugInformation();
+                        if (ao.CatchHandler.Offset >= 0)
+                            c.CatchHandler = ao.CatchHandler.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(ao.CatchHandler.Offset));
+                        c.Yields.AddRange(ao.Yields.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
+                        c.Resumes.AddRange(ao.Resumes.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
+                        c.ResumeMethods.AddRange(ao.ResumeMethods);
+                        return c;
+                    }
+                    else if (o is StateMachineScopeDebugInformation so)
+                    {
+                        var c = new StateMachineScopeDebugInformation();
+                        c.Scopes.AddRange(so.Scopes.Select(s => new StateMachineScope(ResolveInstrOff(s.Start.Offset), s.End.IsEndOfMethod ? null : ResolveInstrOff(s.End.Offset))));
+                        return c;
+                    }
+                    else
+                        return o;
+                }));
+
+                m.DebugInformation.SequencePoints.AddRange(bo.Method.DebugInformation.SequencePoints.Select(o =>
+                {
+                    var c = new SequencePoint(ResolveInstrOff(o.Offset), o.Document);
+                    c.StartLine = o.StartLine;
+                    c.StartColumn = o.StartColumn;
+                    c.EndLine = o.EndLine;
+                    c.EndColumn = o.EndColumn;
+                    return c;
+                }));
             }
-
-            m.CustomDebugInformations.AddRange(bo.Method.CustomDebugInformations.Select(o =>
-            {
-                if (o is AsyncMethodBodyDebugInformation ao)
-                {
-                    var c = new AsyncMethodBodyDebugInformation();
-                    if (ao.CatchHandler.Offset >= 0)
-                        c.CatchHandler = ao.CatchHandler.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(ao.CatchHandler.Offset));
-                    c.Yields.AddRange(ao.Yields.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
-                    c.Resumes.AddRange(ao.Resumes.Select(off => off.IsEndOfMethod ? new InstructionOffset() : new InstructionOffset(ResolveInstrOff(off.Offset))));
-                    c.ResumeMethods.AddRange(ao.ResumeMethods);
-                    return c;
-                }
-                else if (o is StateMachineScopeDebugInformation so)
-                {
-                    var c = new StateMachineScopeDebugInformation();
-                    c.Scopes.AddRange(so.Scopes.Select(s => new StateMachineScope(ResolveInstrOff(s.Start.Offset), s.End.IsEndOfMethod ? null : ResolveInstrOff(s.End.Offset))));
-                    return c;
-                }
-                else
-                    return o;
-            }));
-
-            m.DebugInformation.SequencePoints.AddRange(bo.Method.DebugInformation.SequencePoints.Select(o =>
-            {
-                var c = new SequencePoint(ResolveInstrOff(o.Offset), o.Document);
-                c.StartLine = o.StartLine;
-                c.StartColumn = o.StartColumn;
-                c.EndLine = o.EndLine;
-                c.EndColumn = o.EndColumn;
-                return c;
-            }));
 
             foreach (var c in bc.Instructions)
             {
