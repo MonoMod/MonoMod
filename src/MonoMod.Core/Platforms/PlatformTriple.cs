@@ -402,7 +402,10 @@ namespace MonoMod.Core.Platforms
             var backup = new byte[detourInfo.Size];
 
             // now we can apply the detour through the system
-            System.PatchData(PatchTargetKind.Executable, fromRw, detourData, backup);
+            // if fromRw is specified, and different than from, fromRw is expected to already be writable,
+            // so we patch with the hint that it's readonly so the system doesn't do unnecessary work to
+            // handle the executable case
+            System.PatchData(fromRw == from ? PatchTargetKind.Executable : PatchTargetKind.ReadOnly, fromRw, detourData, backup);
 
             // and now we just create the NativeDetour object
             return new SimpleNativeDetour(this, detourInfo, backup, allocHandle);
@@ -500,7 +503,7 @@ namespace MonoMod.Core.Platforms
             var backup = new byte[detourInfo.Size];
 
             // now we can apply the detour through the system
-            System.PatchData(PatchTargetKind.Executable, fromRw, detourData, backup);
+            System.PatchData(fromRw == from ? PatchTargetKind.Executable : PatchTargetKind.ReadOnly, fromRw, detourData, backup);
 
             // and now we just create the NativeDetour object
             return new NativeDetour(new(this, detourInfo, backup, allocHandle), altEntry, altHandle);
