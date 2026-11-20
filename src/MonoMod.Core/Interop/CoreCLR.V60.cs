@@ -23,7 +23,7 @@ namespace MonoMod.Core.Interop
                     byte**,
                     uint*,
                     CorJitResult,
-                    V60.AllocMemArgs*,
+                    void*,
                     CorJitResult
                 > ptr
             )
@@ -52,7 +52,7 @@ namespace MonoMod.Core.Interop
                     byte**,
                     uint*,
                     CorJitResult,
-                    V60.AllocMemArgs*,
+                    void*,
                     CorJitResult
                 >)methodPtr;
         }
@@ -377,7 +377,7 @@ namespace MonoMod.Core.Interop
                 byte** nativeEntry,
                 uint* nativeSizeOfCode,
                 CorJitResult res,
-                AllocMemArgs* allocMemArgs
+                void* entryRw
             );
 
             public static InvokeCompileMethodHookPostPtr InvokeCompileMethodHookPostPtr => new(&InvokeCompileMethodHookPost);
@@ -391,7 +391,7 @@ namespace MonoMod.Core.Interop
                 byte** nativeEntry,
                 uint* nativeSizeOfCode,
                 CorJitResult res,
-                AllocMemArgs *pArgs)
+                void* entryRw)
             {
                 // this is present so that we can pre-JIT this method by calling it
                 if (functionPtr == IntPtr.Zero)
@@ -401,9 +401,9 @@ namespace MonoMod.Core.Interop
                     (delegate* unmanaged[Thiscall]<
                         IntPtr, IntPtr, CORINFO_METHOD_INFO*,
                         uint, byte**, uint*,
-                        CorJitResult, AllocMemArgs *, CorJitResult
+                        CorJitResult, void*, CorJitResult
                     >)functionPtr;
-                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode, res, pArgs);
+                return fnPtr(thisPtr, corJitInfo, methodInfo, flags, nativeEntry, nativeSizeOfCode, res, entryRw);
             }
 
             public enum MethodClassification

@@ -29,13 +29,71 @@ namespace MonoMod.UnitTest
         [Fact]
         public void WithTieredCompilation()
         {
+            // Importantly, the quick JIT is disabled when it contains loops (in 3, seemingly not in 5)
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            static void From()
+            {
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+                TargetHit = false;
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+            }
+
+            static void TestFrom()
+            {
+                var sw = new Stopwatch();
+                for (var loop = 0; loop < 50; loop++)
+                {
+                    // first we make sure From qualifies for recomp
+                    for (var i = 0; i < 1000; i++)
+                    {
+                        TargetHit = false;
+                        From();
+                        if (!TargetHit)
+                        {
+                            Assert.True(TargetHit, $"iteration {i} of loop {loop}");
+                        }
+                    }
+                    // then we wait for it by spinning
+                    sw.Start();
+                    while (sw.ElapsedMilliseconds < 100)
+                        Empty();
+                    sw.Reset();
+                    // and then try again
+
+                    // make sure that To qualifies for recomp too
+                    for (var i = 0; i < 1000; i++)
+                    {
+                        TargetHit = false;
+                        To();
+                        if (!TargetHit)
+                        {
+                            Assert.True(TargetHit, $"iteration {i} of loop {loop}");
+                        }
+                    }
+                    // then we wait for it by spinning
+                    sw.Start();
+                    while (sw.ElapsedMilliseconds < 100)
+                        Empty();
+                    sw.Reset();
+                    // and then try again
+                }
+            }
+
             if (Environment.GetEnvironmentVariable("MM_TEST_DEBUG_TIERED_COMP") != null)
             {
                 Console.WriteLine("Attach the debugger then press enter");
                 Console.ReadLine();
             }
 
-            using (new Hook(() => From(), () => To()))
+            using (new Hook(((Delegate)From).Method, ((Delegate)To).Method))
             {
                 TestFrom();
             }
@@ -44,6 +102,23 @@ namespace MonoMod.UnitTest
         [Fact]
         public void HookAfterTierUp()
         {
+            // Importantly, the quick JIT is disabled when it contains loops (in 3, seemingly not in 5)
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            static void From()
+            {
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+                TargetHit = false;
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+                Empty();
+            }
+
             var sw = new Stopwatch();
             for (var loop = 0; loop < 5; loop++)
             {
@@ -54,7 +129,7 @@ namespace MonoMod.UnitTest
                     Empty();
             }
 
-            using (new Hook(() => From(), () => To()))
+            using (new Hook(((Delegate)From).Method, ((Delegate)To).Method))
             {
                 TargetHit = false;
                 From();
@@ -62,66 +137,8 @@ namespace MonoMod.UnitTest
             }
         }
 
-        private static void TestFrom()
-        {
-            var sw = new Stopwatch();
-            for (var loop = 0; loop < 50; loop++)
-            {
-                // first we make sure From qualifies for recomp
-                for (var i = 0; i < 1000; i++)
-                {
-                    TargetHit = false;
-                    From();
-                    if (!TargetHit)
-                    {
-                        Assert.True(TargetHit, $"iteration {i} of loop {loop}");
-                    }
-                }
-                // then we wait for it by spinning
-                sw.Start();
-                while (sw.ElapsedMilliseconds < 100)
-                    Empty();
-                sw.Reset();
-                // and then try again
-
-                // make sure that To qualifies for recomp too
-                for (var i = 0; i < 1000; i++)
-                {
-                    TargetHit = false;
-                    To();
-                    if (!TargetHit)
-                    {
-                        Assert.True(TargetHit, $"iteration {i} of loop {loop}");
-                    }
-                }
-                // then we wait for it by spinning
-                sw.Start();
-                while (sw.ElapsedMilliseconds < 100)
-                    Empty();
-                sw.Reset();
-                // and then try again
-            }
-        }
-
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void Empty() { }
-
-        // Importantly, the quick JIT is disabled when it contains loops (in 3, seemingly not in 5)
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void From()
-        {
-            Empty();
-            Empty();
-            Empty();
-            Empty();
-            Empty();
-            TargetHit = false;
-            Empty();
-            Empty();
-            Empty();
-            Empty();
-            Empty();
-        }
 
         private static void To()
         {

@@ -539,11 +539,11 @@ namespace MonoMod.Core.Platforms.Systems
         public INativeExceptionHelper? NativeExceptionHelper
             => Helpers.GetOrInitWithLock(ref lazyNativeExceptionHelper, nehInitLock, static self => self.CreateNativeExceptionHelper(), this);
 
-        public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
+        public unsafe IntPtr GetNativeJitHookConfig(uint runtimeId, int runtimeMajMin)
         {
             if (NativeExceptionHelper is JitMemcpyHelper gcmh)
             {
-                return gcmh.GetJitHookConfig(runtimeMajMin);
+                return gcmh.GetJitHookConfig(runtimeId, runtimeMajMin);
             }
 
             return IntPtr.Zero;
@@ -665,12 +665,13 @@ namespace MonoMod.Core.Platforms.Systems
             /// <summary>
             /// Gets the pointer to the native jit hook configuration struct which can vary by both runtime and arch.
             /// </summary>
+            /// <param name="runtimeId">The runtime identifier to get the config for</param>
             /// <param name="runtimeMajMin">Runtime major and minor version.</param>
             /// <returns>A pointer to the requested jit hook configuration struct.</returns>
-            internal unsafe IntPtr GetJitHookConfig(int runtimeMajMin)
+            internal unsafe IntPtr GetJitHookConfig(uint runtimeId, int runtimeMajMin)
             {
-                var fnPtr = (delegate* unmanaged[Cdecl]<int, IntPtr>)mmch_jit_hook_config;
-                return fnPtr(runtimeMajMin);
+                var fnPtr = (delegate* unmanaged[Cdecl]<uint, int, IntPtr>)mmch_jit_hook_config;
+                return fnPtr(runtimeId, runtimeMajMin);
             }
         }
     }
