@@ -169,7 +169,20 @@ jobs:
     with:
       matrix: ${{ toJSON(matrix.matrix) }}
       title: ${{ matrix.title }}
-      
+
+  merge-test-results:
+    needs: test
+    if: ${{ !cancelled() && needs.test.result != 'skipped' }}
+    name: Merge test results
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/upload-artifact/merge@v6
+      with:
+        name: test-results
+        pattern: test-results *
+        separate-directories: true
+        retention-days: 1
+
   upload:
     needs: [setup, build-testassets]
     if: ${{ needs.setup.outputs.upload_pkgs == 'true' && github.ref_name == 'reorganize' && (success() || needs.setup.result == 'success') }}
