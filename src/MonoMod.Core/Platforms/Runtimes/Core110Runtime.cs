@@ -54,14 +54,15 @@ namespace MonoMod.Core.Platforms.Runtimes
         {
             var md = (V110.MethodDesc*)handle.Value;
 
-            if (md->HasMethodInstantiation())
+            // https://github.com/dotnet/runtime/blob/deae2e32bf0e018e09d64597b7c59b62b73bb3ce/src/coreclr/vm/genmeth.cpp#L1094-L1105
+            if (md->IsUnboxingStub() && (!md->HasMethodInstantiation() || md->IsGenericMethodDefinition()))
             {
-                // this method is a generic instantiation. We don't have proper support for this yet,
-                // the generic paths being stubbed out in our interop logic.
-                throw new NotSupportedException($"The method {method} is generic.");
+                md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
             }
-
-            md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+            else if (md->IsInstantiatingStub())
+            {
+                md = md->AsInstantiatedMethodDesc()->IMD_GetWrappedMethodDesc();
+            }
 
             var ptr = (nint)V110.MethodDesc.GetActiveNativeCodeVersion(md);
 
