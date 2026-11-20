@@ -138,7 +138,20 @@ jobs:
     name: ${{ matrix.title }}
     with:
       matrix: ${{ toJSON(matrix.matrix) }}
-      
+
+  merge-test-results:
+    needs: test
+    if: ${{ !cancelled() && needs.test.result != 'skipped' }}
+    name: Merge test results
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/upload-artifact/merge@v6
+      with:
+        name: test-results
+        pattern: test-results *
+        separate-directories: true
+        retention-days: 1
+
   upload-github:
     needs: [setup, build-testassets, test]
     if: '!inputs.dryrun'
