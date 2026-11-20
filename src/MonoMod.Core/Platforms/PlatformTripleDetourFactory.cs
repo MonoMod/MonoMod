@@ -513,6 +513,8 @@ namespace MonoMod.Core.Platforms
 
             public readonly MethodBase RealDstMethod;
 
+            private bool walking;
+
             private IDisposable? srcPin;
             private IDisposable? dstPin;
 
@@ -533,6 +535,7 @@ namespace MonoMod.Core.Platforms
                 MMDbgLog.Trace($"Applying detour from {SrcMethod} to {RealDstMethod}");
 
                 Triple.Compile(SrcMethod, SrcMethodHandle);
+                walking = true;
                 var from = Triple.GetNativeMethodBody(SrcMethod, SrcMethodHandle);
                 Triple.Compile(RealDstMethod, RealDstMethodHandle);
                 var to = RealDstMethodHandle.GetFunctionPointer();
@@ -562,7 +565,7 @@ namespace MonoMod.Core.Platforms
                 Justification = "We don't want to bubble exceptions out of here, since we're running cooperatively with other handlers")]
             public override void OnRelatedMethodCompiled(MethodBase method, RuntimeMethodHandle handle, nint codeStart, nint codeRw, ulong codeSize)
             {
-                if (!IsApplied)
+                if (!IsApplied && !walking)
                 {
                     return;
                 }

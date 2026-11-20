@@ -39,6 +39,19 @@ namespace MonoMod.Core.Interop
             (_DEBUG && (TARGET_AMD64 || TARGET_ARM64 || TARGET_ARM) && !PlatformDetection.OS.Is(OSKind.Android))
             || PlatformDetection.OS.Is(OSKind.IOS);
 
+        // clrfeatures.cmake: if (FEATURE_DYNAMIC_CODE_COMPILED) set(FEATURE_TIERED_COMPILATION 1)
+        public static readonly bool FEATURE_TIERED_COMPILATION = !PlatformDetection.OS.Is(OSKind.IOS);
+
+        // clrdefinitions.cmake: if (FEATURE_TIERED_COMPILATION OR FEATURE_REJIT OR FEATURE_METADATA_UPDATER)
+        // clrfeatures.cmake sets FEATURE_REJIT together with FEATURE_TIERED_COMPILATION.
+        public static readonly bool FEATURE_CODE_VERSIONING = FEATURE_TIERED_COMPILATION || FEATURE_METADATA_UPDATER;
+
+        // inc/switches.h: defined on TARGET_64BIT if FEATURE_TIERED_COMPILATION
+        public static readonly bool FEATURE_ON_STACK_REPLACEMENT = TARGET_64BIT && FEATURE_TIERED_COMPILATION;
+
+        // inc/switches.h: #if defined(STRESS_HEAP) && defined(_DEBUG) && defined(FEATURE_HIJACK)
+        public static readonly bool HAVE_GCCOVER = _DEBUG;
+
         // clrfeatures.cmake: only for WASM, which MonoMod does not run on. Not const, so code under it stays reachable.
         [SuppressMessage("Performance", "CA1802:Use literals where appropriate", Justification = "See above.")]
         [SuppressMessage("Performance", "CA1805:Do not initialize unnecessarily", Justification = "Stated for clarity.")]
