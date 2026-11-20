@@ -56,9 +56,13 @@ namespace MonoMod.Core.Platforms.Runtimes
 
             // https://github.com/dotnet/runtime/blob/deae2e32bf0e018e09d64597b7c59b62b73bb3ce/src/coreclr/vm/genmeth.cpp#L1094-L1105
             if (md->IsUnboxingStub() && (!md->HasMethodInstantiation() || md->IsGenericMethodDefinition()))
+            {
                 md = V110.MethodDesc.FindTightlyBoundWrappedMethodDesc(md);
+            }
             else if (md->IsInstantiatingStub())
+            {
                 md = md->AsInstantiatedMethodDesc()->IMD_GetWrappedMethodDesc();
+            }
 
             var ptr = (nint)V110.MethodDesc.GetActiveNativeCodeVersion(md);
 
