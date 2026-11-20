@@ -105,6 +105,7 @@ namespace MonoMod
         public bool RemovePatchReferences;
         public bool PreventInline;
         public bool? UpgradeMSCORLIB;
+        public bool CombineSameMethodMultiModPatches;
 
         public ReadingMode ReadingMode = ReadingMode.Immediate;
         public DebugSymbolFormat DebugSymbolOutputFormat = DebugSymbolFormat.Auto;
@@ -280,6 +281,7 @@ namespace MonoMod
             Strict = Environment.GetEnvironmentVariable("MONOMOD_STRICT") == "1";
             MissingDependencyThrow = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW") != "0";
             RemovePatchReferences = Environment.GetEnvironmentVariable("MONOMOD_DEPENDENCY_REMOVE_PATCH") != "0";
+            CombineSameMethodMultiModPatches = Environment.GetEnvironmentVariable("MONOMOD_COMBINE_MORE_MODS_PATCH_SAME_METHOD") == "1";
 
             var envDebugSymbolFormat = Environment.GetEnvironmentVariable("MONOMOD_DEBUG_FORMAT");
             if (envDebugSymbolFormat != null)
@@ -1671,7 +1673,8 @@ namespace MonoMod
 
             MethodDefinition existingMethod = targetType.FindMethod(method.GetID(type: typeName));
             MethodDefinition origMethod = targetType.FindMethod(method.GetID(type: typeName, name: method.GetOriginalName()));
-
+            bool alreadyPatched = origMethod != null;
+            
             if (method.HasCustomAttribute("MonoMod.MonoModIgnore"))
             {
                 // MonoModIgnore is a special case, as registered custom attributes should still be applied.
@@ -1739,6 +1742,77 @@ namespace MonoMod
 
             if (existingMethod != null)
             {
+                //check if multi mods patch same method
+                MethodDefinition modOrigMethod = method.DeclaringType.FindMethod(method.GetID(type: typeName, name: method.GetOriginalName()));
+                if (modOrigMethod != null && alreadyPatched)
+                {
+                    if (CombineSameMethodMultiModPatches)
+                    {
+                        /*
+                         * we have to move previous patched method to a new method named patched_()
+                         * and enumerate next patched method instructions, find instructions which call orig_(), redirect their operand to patched_()
+                         */
+                        string PickPatchedMethodNewName(int idx = 0)
+                        {
+                            var idxPart = idx > 0 ? ("_"+idx) : string.Empty;
+                            var newName = $"patched_{existingMethod.Name}{idxPart}";
+                            if (targetType.Methods.Any(x=>x.Name == newName))
+                                return PickPatchedMethodNewName(idx + 1);
+                            return newName;
+                        }
+                        var patchedOrigMethod = new MethodDefinition(PickPatchedMethodNewName(), existingMethod.Attributes, Module.TypeSystem.Void);
+                        patchedOrigMethod.MetadataToken = GetMetadataToken(TokenType.Method);
+                        patchedOrigMethod.CallingConvention = existingMethod.CallingConvention;
+                        patchedOrigMethod.ExplicitThis = existingMethod.ExplicitThis;
+                        patchedOrigMethod.MethodReturnType = existingMethod.MethodReturnType;
+                        patchedOrigMethod.Attributes = existingMethod.Attributes;
+                        patchedOrigMethod.ImplAttributes = existingMethod.ImplAttributes;
+                        patchedOrigMethod.SemanticsAttributes = existingMethod.SemanticsAttributes;
+                        patchedOrigMethod.DeclaringType = targetType;
+                        patchedOrigMethod.ReturnType = existingMethod.ReturnType;
+                        //methodbody has been patched and debug information was broken and unavaliable.
+                        //todo: maybe we could rebuild dbg info by something tools?
+                        patchedOrigMethod.Body = existingMethod.Body.Clone(patchedOrigMethod, resolveDebugInformation:false);
+                        patchedOrigMethod.PInvokeInfo = existingMethod.PInvokeInfo;
+                        patchedOrigMethod.IsPInvokeImpl = existingMethod.IsPInvokeImpl;
+
+                        //or throw TypeLoadException if existingMethod is a ctor
+                        patchedOrigMethod.IsSpecialName = false;
+                        patchedOrigMethod.IsRuntimeSpecialName = false;
+
+                        foreach (GenericParameter genParam in existingMethod.GenericParameters)
+                            patchedOrigMethod.GenericParameters.Add(genParam.Clone());
+
+                        foreach (ParameterDefinition param in existingMethod.Parameters)
+                            patchedOrigMethod.Parameters.Add(param.Clone());
+
+                        foreach (CustomAttribute attrib in existingMethod.CustomAttributes)
+                            patchedOrigMethod.CustomAttributes.Add(attrib.Clone());
+
+                        foreach (MethodReference @override in existingMethod.Overrides)
+                            patchedOrigMethod.Overrides.Add(@override);
+
+                        patchedOrigMethod.CustomAttributes.Add(new CustomAttribute(GetMonoModAddedCtor()));
+                        
+                        //replace inst which call orig_()
+                        foreach (var inst in method.Body.Instructions)
+                        {
+                            if (inst.OpCode == OpCodes.Call && inst.Operand == modOrigMethod)
+                            {
+                                //redirect to patched_()
+                                inst.Operand = patchedOrigMethod;
+                            }
+                        }
+                        
+                        targetType.Methods.Add(patchedOrigMethod);
+                        LogVerbose($"[PatchMethod] Detected mod {method.Module.Name} repatched method {existingMethod.GetID(simple:true)}(), old patched implement moved to {patchedOrigMethod.GetID(simple:true)}()");
+                    }
+                    else
+                    {
+                        LogVerbose($"[PatchMethod] Detected mod {method.Module.Name} repatched method {existingMethod.GetID(simple:true)}(), old patched implement from previous mod will be replaced.");
+                    }
+                }
+                
                 existingMethod.Body = method.Body.Clone(existingMethod);
                 existingMethod.IsManaged = method.IsManaged;
                 existingMethod.IsIL = method.IsIL;
@@ -1752,7 +1826,6 @@ namespace MonoMod
                     existingMethod.CustomAttributes.Add(attrib.Clone());
 
                 method = existingMethod;
-
             }
             else
             {
