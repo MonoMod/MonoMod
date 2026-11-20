@@ -96,55 +96,54 @@ struct JitHookConfig {
 
 static struct JitHookConfig jitHookConfig;
 
+static int ICorJitCompiler_compileMethod_hook(void *pThis, void *comp,
+                                              void *info, unsigned flags,
+                                              uint8_t **nativeEntry,
+                                              uint32_t *nativeSizeOfCode) {
+  CompileMethodHookTracker tracker;
+  int entrancy = tracker.entrancy();
+  if (entrancy == 1) {
+    savedEntryRw = nullptr;
+  }
+
+  int res = jitHookConfig.compileMethod(pThis, comp, info, flags, nativeEntry,
+                                        nativeSizeOfCode);
+  if (entrancy == 1 && res == 0) {
+    try {
+#if defined(DISABLE_JWP_DETECTION)
+      // Since the MAP_JIT W^X write protection is thread local, we can use a
+      // new thread to invoke the managed post method.
+      std::thread hook_post_thread([&]() {
+        try {
+          CompileMethodHookTracker tracker;
+          res = jitHookConfig.compileMethodHookPost(
+              pThis, comp, info, flags, nativeEntry, nativeSizeOfCode, res,
+              savedEntryRw);
+        } catch (...) {
+          // Just catch and eat all exceptions, we don't want this thread to
+          // abort unexpectedly
+        }
+      });
+
+      hook_post_thread.join();
+#else
+      PthreadJitWriteProtectScope jwps(true);
+      res = jitHookConfig.compileMethodHookPost(pThis, comp, info, flags,
+                                                nativeEntry, nativeSizeOfCode,
+                                                res, savedEntryRw);
+#endif
+    } catch (...) {
+      // Just catch and eat all exceptions as we don't want anything making
+      // their way back to the compileMethod callers
+    }
+  }
+
+  return res;
+}
+
 template <typename TAllocMemArgs> struct AllocMemArgsFns;
 
 template <typename TAllocMemArgs> class TemplatedHolder {
-
-  static int ICorJitCompiler_compileMethod_hook(void *pThis, void *comp,
-                                                void *info, unsigned flags,
-                                                uint8_t **nativeEntry,
-                                                uint32_t *nativeSizeOfCode) {
-    CompileMethodHookTracker tracker;
-    int entrancy = tracker.entrancy();
-    if (entrancy == 1) {
-      savedEntryRw = nullptr;
-    }
-
-    int res = jitHookConfig.compileMethod(pThis, comp, info, flags, nativeEntry,
-                                          nativeSizeOfCode);
-    if (entrancy == 1 && res == 0) {
-      try {
-#if defined(DISABLE_JWP_DETECTION)
-        // Since the MAP_JIT W^X write protection is thread local, we can use a
-        // new thread to invoke the managed post method.
-        std::thread hook_post_thread([&]() {
-          try {
-            CompileMethodHookTracker tracker;
-            res = jitHookConfig.compileMethodHookPost(
-                pThis, comp, info, flags, nativeEntry, nativeSizeOfCode, res,
-                savedEntryRw);
-          } catch (...) {
-            // Just catch and eat all exceptions, we don't want this thread to
-            // abort unexpectedly
-          }
-        });
-
-        hook_post_thread.join();
-#else
-        PthreadJitWriteProtectScope jwps(true);
-        res = jitHookConfig.compileMethodHookPost(pThis, comp, info, flags,
-                                                  nativeEntry, nativeSizeOfCode,
-                                                  res, savedEntryRw);
-#endif
-      } catch (...) {
-        // Just catch and eat all exceptions as we don't want anything making
-        // their way back to the compileMethod callers
-      }
-    }
-
-    return res;
-  }
-
   static void ICorJitInfo_allocMem_hook(void *pThis, void *pArgs) {
     jitHookConfig.allocMem(pThis, pArgs);
     if (compileMethod_Entrancy == 1) {
@@ -160,8 +159,7 @@ public:
   static JitHookConfig *getConfig() {
     if (jitHookConfig.compileMethodHook == nullptr) {
       jitHookConfig = JitHookConfig{
-          .compileMethodHook = &TemplatedHolder<
-              TAllocMemArgs>::ICorJitCompiler_compileMethod_hook,
+          .compileMethodHook = &ICorJitCompiler_compileMethod_hook,
           .allocMemHook =
               &TemplatedHolder<TAllocMemArgs>::ICorJitInfo_allocMem_hook,
       };
@@ -248,7 +246,8 @@ template class TemplatedHolder<V110::AllocMemArgs>;
 } // namespace Core
 } // namespace JitHooks
 
-extern "C" void *mmch_jit_hook_config(uint32_t runtime, int32_t runtimeMajMin) {
+__attribute__((__visibility__("default"))) extern "C" void *
+mmch_jit_hook_config(uint32_t runtime, int32_t runtimeMajMin) {
 #if !defined(FORCE_NATIVE_JIT_HOOK_USE)
   if (!pthread_jit_write_protect_supported_np())
     return nullptr;
@@ -269,7 +268,8 @@ extern "C" void *mmch_jit_hook_config(uint32_t runtime, int32_t runtimeMajMin) {
   }
 }
 
-extern "C" void mmch_jit_memcpy(void *dst, const void *src, size_t n) {
+__attribute__((__visibility__("default"))) extern "C" void
+mmch_jit_memcpy(void *dst, const void *src, size_t n) {
 #if defined(DISABLE_JWP_DETECTION)
   int jwp = pthread_jit_write_protect_supported_np();
   if (jwp)

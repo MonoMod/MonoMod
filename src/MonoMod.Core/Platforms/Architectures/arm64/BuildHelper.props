@@ -16,10 +16,10 @@
 
     <Arm64HelperLinux Include="$(MSBuildThisFileDirectory)exhelper_linux_macos_arm64.S" />
     <Arm64HelperLinux Include="$(MSBuildThisFileDirectory)helper_linux_clearcache.c"
-                      ExtraOpts="-std=c99 -Wall -fno-builtin" />
+                      ExtraOpts="-std=c99 -Wall -fno-builtin -fvisibility=hidden -fvisibility-inlines-hidden" />
     <Arm64HelperMacOS Include="$(MSBuildThisFileDirectory)exhelper_linux_macos_arm64.S" />
     <Arm64HelperMacOS Include="$(MSBuildThisFileDirectory)helper_macos_arm64.cpp"
-        ExtraOpts="-std=c++20 -lc++ -Wall -fno-rtti" LinkerOpts="-lc++" />
+        ExtraOpts="-std=c++20 -lc++ -Wall -fno-rtti -fvisibility=hidden -fvisibility-inlines-hidden" LinkerOpts="-lc++" />
   </ItemGroup>
 
   <PropertyGroup>
