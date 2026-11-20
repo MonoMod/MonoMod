@@ -200,6 +200,10 @@ namespace MonoMod.Core.Platforms.Systems
                 if (Unix.Mincore(page, 1, &garbage) == -1)
                 {
                     var lastError = Unix.Errno;
+                    if (lastError == 11)
+                    {  // EAGAIN, try again!
+                        return PageAllocated(page);
+                    }
                     if (lastError == 12)
                     {  // ENOMEM, page is unallocated
                         return false;
