@@ -513,7 +513,7 @@ namespace MonoMod.Core.Platforms.Systems
             }
         }
 
-        public unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin)
+        public unsafe IntPtr GetNativeJitHookConfig(uint runtimeId, int runtimeMajMin)
         {
             throw new NotImplementedException();
         }

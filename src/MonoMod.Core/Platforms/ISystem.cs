@@ -80,9 +80,10 @@ namespace MonoMod.Core.Platforms
         /// <summary>
         /// Gets the pointer to the native jit hook configuration struct which can vary by both runtime and arch.
         /// </summary>
+        /// <param name="runtimeId">The ID of the runtime to get the hook config for</param>
         /// <param name="runtimeMajMin">Runtime major and minor version.</param>
         /// <returns>A pointer to the requested jit hook configuration struct.</returns>
-        unsafe IntPtr GetNativeJitHookConfig(int runtimeMajMin);
+        IntPtr GetNativeJitHookConfig(uint runtimeId, int runtimeMajMin);
     }
 
     /// <summary>

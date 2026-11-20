@@ -349,6 +349,9 @@ namespace MonoMod.Core.Platforms.Runtimes
         protected override int CORJIT_FLAG_OSR => 7;
         protected override int SizeofCORJIT_FLAG => 24;
 
+        protected unsafe override NativeJitHookConfig* GetNativeJitHookConfig()
+            => (NativeJitHookConfig*)System.GetNativeJitHookConfig(0x436F7265, 110);
+
         protected override Delegate CastAllocMemToRealType(Delegate del)
             => del.CastDelegate<V110.AllocMemDelegate>();
 
@@ -403,8 +406,15 @@ namespace MonoMod.Core.Platforms.Runtimes
                 for (uint i = 0; i < args->chunksCount; i++)
                 {
                     ref var chunk = ref args->chunks[i];
-                    if ((chunk.flags & V110.CorJitAllocMemFlag.HotCode) != 0)
+                    if (chunk.flags == V110.CorJitAllocMemFlag.HotCode)
                     {
+                        // the JIT will allocate exactly one chunk marked HOT_CODE (currently
+                        // always the first) as its code chunk, which will be the entrypoint.
+
+                        if ((*wrap)[ICorJitInfoWrapper.HotCodeRW] != IntPtr.Zero)
+                        {
+                            continue;
+                        }
                         (*wrap)[ICorJitInfoWrapper.HotCodeRW] = chunk.blockRW;
                     }
                     else if ((chunk.flags & V110.CorJitAllocMemFlag.ColdCode) != 0)

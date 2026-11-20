@@ -6,13 +6,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-
 #if NET6_USE_RUNTIME_INTROSPECTION
 using System.Reflection;
-using System.Runtime.CompilerServices;
 #endif
+
 using static MonoMod.Core.Interop.CoreCLR;
-using static MonoMod.Core.Interop.CoreCLR.V60;
 
 namespace MonoMod.Core.Platforms.Runtimes
 {
@@ -99,8 +97,7 @@ namespace MonoMod.Core.Platforms.Runtimes
             V21.CORINFO_METHOD_INFO methodInfo;
             byte* nativeStart;
             uint nativeSize;
-            AllocMemArgs args;
-            V60.InvokeCompileMethodHookPostPtr.InvokeCompileMethodHookPost(ourCompileMethodHookPostPtr, IntPtr.Zero, IntPtr.Zero, &methodInfo, 0, &nativeStart, &nativeSize, CorJitResult.CORJIT_OK, &args);
+            V60.InvokeCompileMethodHookPostPtr.InvokeCompileMethodHookPost(ourCompileMethodHookPostPtr, IntPtr.Zero, IntPtr.Zero, &methodInfo, 0, &nativeStart, &nativeSize, CorJitResult.CORJIT_OK, null);
 
             hookConfig->compileMethod = *compileMethodSlot;
             hookConfig->compileMethodHookPost = ourCompileMethodHookPostPtr;
@@ -308,7 +305,8 @@ namespace MonoMod.Core.Platforms.Runtimes
             public IntPtr allocMemHook;
         }
 
-        protected unsafe virtual NativeJitHookConfig* GetNativeJitHookConfig() => (NativeJitHookConfig*)System.GetNativeJitHookConfig(60);
+        protected unsafe virtual NativeJitHookConfig* GetNativeJitHookConfig()
+            => (NativeJitHookConfig*)System.GetNativeJitHookConfig(0x436F7265, 60);
 
         protected unsafe virtual Delegate CreateCompileMethodHookPostDelegate()
         {
@@ -343,7 +341,7 @@ namespace MonoMod.Core.Platforms.Runtimes
                 byte** nativeEntry,
                 uint* nativeSizeOfCode,
                 CorJitResult res,
-                AllocMemArgs* pArgs)
+                void* rwEntry)
             {
                 if (jit == IntPtr.Zero)
                     return res;
@@ -382,7 +380,7 @@ namespace MonoMod.Core.Platforms.Runtimes
                         }
                     }
 
-                    Runtime.CompileMethodHookPostCommon(methodInfo, nativeEntry, nativeSizeOfCode, pArgs->hotCodeBlockRW);
+                    Runtime.CompileMethodHookPostCommon(methodInfo, nativeEntry, nativeSizeOfCode, (nint)rwEntry);
                 }
                 catch
                 {
