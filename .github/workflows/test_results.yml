@@ -36,7 +36,8 @@ jobs:
       with:
         run-id: ${{ github.event.workflow_run.id }}
         github-token: ${{ github.token }}
-        name: test-results
+        pattern: test-results
+        merge-multiple: false
         
     - name: Publish Test Results
       uses: nike4613/actions-test-results@v3
