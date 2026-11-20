@@ -408,9 +408,9 @@ namespace MonoMod.Core.Platforms.Runtimes
                     ref var chunk = ref args->chunks[i];
                     if (chunk.flags == V110.CorJitAllocMemFlag.HotCode)
                     {
-                        // the JIT will allocate exactly one chunk marked HOT_CODE (currently
-                        // always the first) as its code chunk, which will be the entrypoint.
-
+                        // the JIT will allocate exactly one chunk marked exactly HOT_CODE
+                        // (currently always the first) as its code chunk, which will be the
+                        // entrypoint.
                         if ((*wrap)[ICorJitInfoWrapper.HotCodeRW] != IntPtr.Zero)
                         {
                             continue;

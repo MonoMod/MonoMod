@@ -113,12 +113,13 @@ static int ICorJitCompiler_compileMethod_hook(void *pThis, void *comp,
 #if defined(DISABLE_JWP_DETECTION)
       // Since the MAP_JIT W^X write protection is thread local, we can use a
       // new thread to invoke the managed post method.
+      auto localSavedEntryRw = savedEntryRw;
       std::thread hook_post_thread([&]() {
         try {
           CompileMethodHookTracker tracker;
           res = jitHookConfig.compileMethodHookPost(
               pThis, comp, info, flags, nativeEntry, nativeSizeOfCode, res,
-              savedEntryRw);
+              localSavedEntryRw);
         } catch (...) {
           // Just catch and eat all exceptions, we don't want this thread to
           // abort unexpectedly
@@ -230,8 +231,9 @@ template <> struct AllocMemArgsFns<V110::AllocMemArgs> {
   static void *getEntryRw(V110::AllocMemArgs const *pArgs) {
     for (uint32_t i = 0; i < pArgs->chunksCount; i++) {
       auto *pChunk = &pArgs->chunks[i];
-      // the JIT will allocate exactly one chunk marked HOT_CODE (currently
-      // always the first) as its code chunk, which will be the entrypoint.
+      // the JIT will allocate exactly one chunk marked exactly HOT_CODE
+      // (currently always the first) as its code chunk, which will be the
+      // entrypoint.
       if (pChunk->flags == V110::CorJitAllocMemFlag::HotCode) {
         return pChunk->blockRw;
       }
