@@ -42,8 +42,7 @@ namespace MonoMod.Core.Platforms.Systems
             if (!isReturn)
                 return TypeClassification.OnStack;
 
-            // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-x86.c#L343-L370
-            if (type.IsPrimitive || type.IsEnum || type.GetManagedSize() is 1 or 2 or 4)
+            if (type.GetManagedSize() is 1 or 2 or 4)
                 return TypeClassification.InRegister;
             else
                 return TypeClassification.ByReference;
