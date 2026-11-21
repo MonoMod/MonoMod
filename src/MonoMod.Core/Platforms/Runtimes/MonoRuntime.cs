@@ -144,6 +144,18 @@ namespace MonoMod.Core.Platforms.Runtimes
             };
         }
 
+        private static TypeClassification X86Classifier(Type type, bool isReturn)
+        {
+            if (!isReturn)
+                return TypeClassification.OnStack;
+
+            // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-x86.c#L343-L370
+            if (type.IsPrimitive || type.IsEnum || type.GetManagedSize() is 1 or 2 or 4)
+                return TypeClassification.InRegister;
+            else
+                return TypeClassification.ByReference;
+        }
+
         private static IEnumerable<FieldInfo> NestedValutypeFields(Type type)
         {
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -176,6 +188,13 @@ namespace MonoMod.Core.Platforms.Runtimes
                     abi = abi with
                     {
                         Classifier = LinuxAmd64Classifier
+                    };
+                }
+                if (PlatformDetection.Architecture is ArchitectureKind.x86)
+                {
+                    abi = abi with
+                    {
+                        Classifier = X86Classifier
                     };
                 }
                 // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
