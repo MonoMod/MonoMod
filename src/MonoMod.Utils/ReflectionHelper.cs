@@ -597,5 +597,24 @@ namespace MonoMod.Utils
             return shelper;
         }
 
+        public static RuntimeTypeHandle[]? GetGenericArguments(MethodBase method)
+        {
+            Helpers.ThrowIfArgumentNull(method);
+
+            var typeGenericArguments = method.DeclaringType?.IsGenericType == true
+                ? method.DeclaringType.GetGenericArguments()
+                : Type.EmptyTypes;
+
+            var methodGenericArguments = method.IsGenericMethod
+                ? method.GetGenericArguments()
+                : Type.EmptyTypes;
+
+            if (typeGenericArguments.Length == 0 && methodGenericArguments.Length == 0)
+                return null;
+
+            var allGenericArguments = typeGenericArguments.Concat(methodGenericArguments).ToArray();
+            return allGenericArguments.Select(x => x.TypeHandle).ToArray();
+        }
+
     }
 }

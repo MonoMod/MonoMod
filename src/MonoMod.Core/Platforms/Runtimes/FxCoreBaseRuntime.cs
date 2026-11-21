@@ -413,7 +413,7 @@ namespace MonoMod.Core.Platforms.Runtimes
                 handle = GetMethodHandle(method);
             }
 
-            RuntimeHelpers.PrepareMethod(handle);
+            RuntimeHelpers.PrepareMethod(handle, ReflectionHelper.GetGenericArguments(method));
             Helpers.Assert(TryInvokeBclCompileMethod(handle));
 
             if (method.IsVirtual && (method.DeclaringType?.IsValueType ?? false))
