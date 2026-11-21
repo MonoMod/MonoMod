@@ -3,6 +3,7 @@ using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -200,10 +201,12 @@ namespace MonoMod.Core.Platforms.Runtimes
                 // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
                 if (PlatformDetection.Architecture is ArchitectureKind.x86_64 or ArchitectureKind.x86)
                 {
-                    // Mono passes the return buffer after this on every OS (get_call_info in mini-amd64.c and mini-x86.c)
+                    // Mono passes the return buffer after this, or after the first argument of a static method if it's a reference type,
+                    // on every OS (get_call_info in mini-amd64.c and mini-x86.c)
                     abi = abi with
                     {
-                        ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments }
+                        ArgumentOrder = new[] { SpecialArgumentKind.ThisPointer, SpecialArgumentKind.ReturnBuffer, SpecialArgumentKind.UserArguments },
+                        ReferenceArgumentTakesThisSlot = true,
                     };
                 }
                 Abi = abi;
@@ -255,8 +258,58 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         public MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default)
         {
-            // Mono never provides generic context through an abi argument, and doesn't support runtimeasync
-            return 0;
+            // Mono passes the generic context in a register instead of an argument, and doesn't support runtimeasync
+            return NeedsGenericContext(method) ? MethodAbiFlags.HasGenericContext : 0;
+        }
+
+        // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-generic-sharing.c#L3502-L3519
+        private bool NeedsGenericContext(MethodBase method)
+        {
+            if (!method.IsGenericMethod &&
+                !(method.DeclaringType is { IsGenericType: true } type && (method.IsStatic || type.IsValueType || (type.IsInterface && !method.IsAbstract))))
+            {
+                return false;
+            }
+
+            // Mono registers shared code under the shared method, so the code is shared if its jit info belongs to another method
+            var handle = GetMethodHandle(method);
+            return JitInfo.GetJitInfoMethod(handle.GetFunctionPointer()) != handle.Value;
+        }
+
+        private sealed class JitInfoHelper(IntPtr library)
+        {
+            private readonly IntPtr mono_domain_get = DynDll.GetExport(library, nameof(mono_domain_get));
+            private readonly IntPtr mono_jit_info_table_find = DynDll.GetExport(library, nameof(mono_jit_info_table_find));
+            private readonly IntPtr mono_jit_info_get_method = DynDll.GetExport(library, nameof(mono_jit_info_get_method));
+
+            public unsafe IntPtr GetJitInfoMethod(IntPtr code)
+            {
+                var domain = ((delegate* unmanaged[Cdecl]<IntPtr>)mono_domain_get)();
+                var jitInfo = ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr>)mono_jit_info_table_find)(domain, code);
+                return jitInfo == IntPtr.Zero ? IntPtr.Zero : ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr>)mono_jit_info_get_method)(jitInfo);
+            }
+        }
+
+        private JitInfoHelper? lazyJitInfo;
+        private JitInfoHelper JitInfo => lazyJitInfo ??= new(OpenMonoLibrary());
+
+        private IntPtr OpenMonoLibrary()
+        {
+            if (DynDll.TryOpenLibrary(null, out var lib) && lib.TryGetExport("mono_jit_info_table_find", out _))
+            {
+                return lib;
+            }
+
+            foreach (var file in system.EnumerateLoadedModuleFiles())
+            {
+                if (file is not null && Path.GetFileName(file).Contains("mono", StringComparison.OrdinalIgnoreCase) &&
+                    DynDll.TryOpenLibrary(file, out lib) && lib.TryGetExport("mono_jit_info_table_find", out _))
+                {
+                    return lib;
+                }
+            }
+
+            throw new PlatformNotSupportedException("Could not locate the Mono runtime library");
         }
 
         private sealed class PrivateMethodPin

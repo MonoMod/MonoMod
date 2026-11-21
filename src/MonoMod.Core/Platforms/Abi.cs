@@ -93,6 +93,12 @@ namespace MonoMod.Core.Platforms
     )
     {
         /// <summary>
+        /// <see langword="true"/> if the first argument of a static method takes the place of <see cref="SpecialArgumentKind.ThisPointer"/>
+        /// in <see cref="ArgumentOrder"/> when it is a reference type; <see langword="false"/> otherwise.
+        /// </summary>
+        public bool ReferenceArgumentTakesThisSlot { get; init; }
+
+        /// <summary>
         /// Classifies a type according to the ABI.
         /// </summary>
         /// <remarks>
