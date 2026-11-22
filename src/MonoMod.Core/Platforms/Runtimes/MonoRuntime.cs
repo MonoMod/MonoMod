@@ -258,8 +258,9 @@ namespace MonoMod.Core.Platforms.Runtimes
 
         public MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default)
         {
-            // Mono passes the generic context in a register instead of an argument, and doesn't support runtimeasync
-            return NeedsGenericContext(method) ? MethodAbiFlags.HasGenericContext : 0;
+            // callers pass the generic context of shared code in a register, so a detour has to call it instead of jumping to it
+            // Mono doesn't support runtimeasync
+            return NeedsGenericContext(method) ? MethodAbiFlags.RequiresAbiFixup : 0;
         }
 
         // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-generic-sharing.c#L3502-L3519

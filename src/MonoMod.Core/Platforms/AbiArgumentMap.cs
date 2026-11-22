@@ -269,7 +269,6 @@ namespace MonoMod.Core.Platforms
             var srcArgKindsMapped = 0;
 
             var isIdentity = true;
-            var targetUserArgs = 0;
             var targetArgs = targetAbi.Arguments.Span;
             var sourceArgs = sourceAbi.Arguments.Span;
             for (var i = 0; i < targetArgs.Length; i++)
@@ -281,7 +280,7 @@ namespace MonoMod.Core.Platforms
 
                 if (tgtArg.Kind is SpecialArgumentKind.UserArguments)
                 {
-                    var userArgIdx = targetUserArgs++;
+                    var userArgIdx = i - targetAbi.FirstUserArgument;
 
                     if (userArgIdx < targetFromSourceMappedUserArgs.Length)
                     {
@@ -308,10 +307,6 @@ namespace MonoMod.Core.Platforms
                     if (srcArgUserIndex >= 0 && srcArgUserIndex < sourceAbi.UserArgumentCount)
                     {
                         srcArgIdx = sourceAbi.FirstUserArgument + srcArgUserIndex;
-                        if (sourceAbi.ReturnBufferArgument > sourceAbi.FirstUserArgument && srcArgIdx >= sourceAbi.ReturnBufferArgument)
-                        {
-                            srcArgIdx++;
-                        }
                     }
                     else
                     {

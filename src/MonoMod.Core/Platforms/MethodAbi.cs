@@ -1,7 +1,6 @@
 ﻿using MonoMod.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 
 namespace MonoMod.Core.Platforms
@@ -103,8 +102,13 @@ namespace MonoMod.Core.Platforms
                         if (FirstUserArgument == -1)
                         {
                             FirstUserArgument = i;
+                            UserArgumentCount = 1;
                         }
-                        UserArgumentCount++;
+                        else
+                        {
+                            Helpers.Assert(UserArgumentCount == i - FirstUserArgument);
+                            UserArgumentCount++;
+                        }
                         break;
 
                     default:
@@ -162,8 +166,7 @@ namespace MonoMod.Core.Platforms
             }
 
             var args = new List<AbiArgument>();
-            var parameters = method.GetParameters();
-            var firstUserParameter = 0;
+            var parameters = new ReadOnlySpan<ParameterInfo>(method.GetParameters());
 
             var abiOrder = abi.ArgumentOrder.Span;
             for (var i = 0; i < abiOrder.Length; i++)
@@ -182,9 +185,9 @@ namespace MonoMod.Core.Platforms
                         else if (abi.ReferenceArgumentTakesThisSlot && parameters.Length > 0 && parameters[0].ParameterType is { IsValueType: false, IsByRef: false, IsPointer: false })
                         {
                             args.Add(new(
-                                Kind: SpecialArgumentKind.UserArguments,
+                                Kind: SpecialArgumentKind.ThisPointer,
                                 Type: parameters[0].ParameterType));
-                            firstUserParameter = 1;
+                            parameters = parameters.Slice(1);
                         }
                         break;
                     case SpecialArgumentKind.ReturnBuffer:
@@ -236,7 +239,7 @@ namespace MonoMod.Core.Platforms
                         break;
                     case SpecialArgumentKind.UserArguments:
                         // user arguments just get forwarded directly to the ABI level
-                        foreach (var arg in parameters.Skip(firstUserParameter))
+                        foreach (var arg in parameters)
                         {
                             // TODO: when we do proper generics support, we need to substitute arguments
                             // which correspond to shared generic parameters with a type corresponding to

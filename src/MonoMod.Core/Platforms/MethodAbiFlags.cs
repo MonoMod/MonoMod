@@ -21,5 +21,9 @@ namespace MonoMod.Core.Platforms
         /// The method requires an async continuation parameter.
         /// </summary>
         HasAsyncContinuation = 1 << 1,
+        /// <summary>
+        /// Detours to the method must go through an ABI fixup, even if the argument mapping is the identity.
+        /// </summary>
+        RequiresAbiFixup = 1 << 2,
     }
 }
