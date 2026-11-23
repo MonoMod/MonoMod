@@ -3,6 +3,7 @@ using MonoMod.Core.Platforms.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -147,6 +148,13 @@ namespace MonoMod.UnitTest.Core
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ClearStack()
+        {
+            Span<byte> stack = stackalloc byte[2 * 1232];
+            stack.Clear();
+        }
+
         [Fact]
         public void FreedPageAddressCanBeReused()
         {
@@ -162,6 +170,8 @@ namespace MonoMod.UnitTest.Core
             IAllocatedMemory? reused = null;
             memAllocator.OnFree = () => memAllocator.TryAllocate(new(16), out reused);
 
+            // Boehm GC (#364)
+            ClearStack();
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
