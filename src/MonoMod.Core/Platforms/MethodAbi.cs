@@ -46,14 +46,9 @@ namespace MonoMod.Core.Platforms
         public int AsyncContinuationArgument { get; } = -1;
 
         /// <summary>
-        /// The index of the first user argument, or <c>-1</c> if there are no user arguments.
+        /// The indices of this method's user arguments.
         /// </summary>
-        public int FirstUserArgument { get; } = -1;
-
-        /// <summary>
-        /// The number of user arguments in this method ABI.
-        /// </summary>
-        public int UserArgumentCount { get; }
+        public ReadOnlyMemory<int> UserArguments { get; }
 
         /// <summary>
         /// <see langword="true"/> if the ABI returns the return buffer parameter.
@@ -73,6 +68,7 @@ namespace MonoMod.Core.Platforms
             Arguments = arguments;
             AbiReturn = abiReturn;
 
+            var userArgs = new List<int>();
             Type? argRetBufType = null;
             var argSpan = arguments.Span;
             for (var i = 0; i < argSpan.Length; i++)
@@ -99,16 +95,7 @@ namespace MonoMod.Core.Platforms
                         break;
 
                     case SpecialArgumentKind.UserArguments:
-                        if (FirstUserArgument == -1)
-                        {
-                            FirstUserArgument = i;
-                            UserArgumentCount = 1;
-                        }
-                        else
-                        {
-                            Helpers.Assert(UserArgumentCount == i - FirstUserArgument);
-                            UserArgumentCount++;
-                        }
+                        userArgs.Add(i);
                         break;
 
                     default:
@@ -116,6 +103,7 @@ namespace MonoMod.Core.Platforms
                 }
             }
 
+            UserArguments = userArgs.ToArray();
             AbiReturnIsReturnBuffer = returnReturnBuffer && ReturnBufferArgument >= 0;
 
             if (AbiReturnIsReturnBuffer)
@@ -166,6 +154,7 @@ namespace MonoMod.Core.Platforms
             }
 
             var args = new List<AbiArgument>();
+            var parameters = new ReadOnlySpan<ParameterInfo>(method.GetParameters());
 
             var abiOrder = abi.ArgumentOrder.Span;
             for (var i = 0; i < abiOrder.Length; i++)
@@ -180,6 +169,13 @@ namespace MonoMod.Core.Platforms
                             args.Add(new(
                                 Kind: SpecialArgumentKind.ThisPointer,
                                 Type: method.GetThisParamType()));
+                        }
+                        else if (abi.ReferenceArgumentTakesThisSlot && parameters.Length > 0 && parameters[0].ParameterType is { IsValueType: false, IsByRef: false, IsPointer: false })
+                        {
+                            args.Add(new(
+                                Kind: SpecialArgumentKind.UserArguments,
+                                Type: parameters[0].ParameterType));
+                            parameters = parameters.Slice(1);
                         }
                         break;
                     case SpecialArgumentKind.ReturnBuffer:
@@ -231,7 +227,7 @@ namespace MonoMod.Core.Platforms
                         break;
                     case SpecialArgumentKind.UserArguments:
                         // user arguments just get forwarded directly to the ABI level
-                        foreach (var arg in method.GetParameters())
+                        foreach (var arg in parameters)
                         {
                             // TODO: when we do proper generics support, we need to substitute arguments
                             // which correspond to shared generic parameters with a type corresponding to

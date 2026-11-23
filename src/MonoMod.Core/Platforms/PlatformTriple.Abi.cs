@@ -59,7 +59,8 @@ namespace MonoMod.Core.Platforms
             dst = GetIdentifiable(dst);
 
             var srcAbi = GetMethodAbi(MethodAbiUsage.RealMethodBody, src);
-            var dstAbi = GetMethodAbi(MethodAbiUsage.NormalEntry, dst);
+            var dstAbiFlags = Runtime.GetMethodAbiFlags(MethodAbiUsage.NormalEntry, dst);
+            var dstAbi = GetMethodAbi(dst, dstAbiFlags);
 
             var argOrder = new int[dstAbi.Arguments.Length];
             var result = argumentMap.MapArguments(srcAbi, dstAbi, argOrder);
@@ -72,7 +73,7 @@ namespace MonoMod.Core.Platforms
             {
                 MMDbgLog.Warning($"Mapping from src={src} to dst={dst} has unused ABI arguments in src");
             }
-            if (result.Has(AbiArgumentMapResult.MappingIsIdentity))
+            if (result.Has(AbiArgumentMapResult.MappingIsIdentity) && !dstAbiFlags.Has(MethodAbiFlags.RequiresAbiFixup))
             {
                 // the mapping is the identity map, we can just use dst as the target
                 return dst;
