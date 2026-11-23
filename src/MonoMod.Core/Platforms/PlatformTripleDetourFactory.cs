@@ -453,7 +453,7 @@ namespace MonoMod.Core.Platforms
 
         [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly",
             Justification = "the referred to argument names are for the public api surface")]
-        private AbiArgumentMap GetArgumentMap(MethodBase src, MethodBase dst)
+        private static AbiArgumentMap GetArgumentMap(MethodBase src, MethodBase dst)
         {
 
             if (!dst.IsStatic)
@@ -471,11 +471,6 @@ namespace MonoMod.Core.Platforms
                 // dst is static
                 if (src.IsStatic)
                 {
-                    return AbiArgumentMap.Identity;
-                }
-                else if (triple.GetMethodAbi(MethodAbiUsage.NormalEntry, dst).ThisArgument >= 0)
-                {
-                    // the ABI passes dst's first argument as this (Abi.ReferenceArgumentTakesThisSlot), so src's this needs no remapping
                     return AbiArgumentMap.Identity;
                 }
                 else

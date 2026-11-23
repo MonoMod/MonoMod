@@ -269,6 +269,8 @@ namespace MonoMod.Core.Platforms
             var srcArgKindsMapped = 0;
 
             var isIdentity = true;
+            var targetUserArgs = 0;
+            var sourceUserArgs = sourceAbi.UserArguments.Span;
             var targetArgs = targetAbi.Arguments.Span;
             var sourceArgs = sourceAbi.Arguments.Span;
             for (var i = 0; i < targetArgs.Length; i++)
@@ -280,7 +282,7 @@ namespace MonoMod.Core.Platforms
 
                 if (tgtArg.Kind is SpecialArgumentKind.UserArguments)
                 {
-                    var userArgIdx = i - targetAbi.FirstUserArgument;
+                    var userArgIdx = targetUserArgs++;
 
                     if (userArgIdx < targetFromSourceMappedUserArgs.Length)
                     {
@@ -304,9 +306,9 @@ namespace MonoMod.Core.Platforms
                 {
                     // if srcArgKind is UserArguments, but srcArgUserIndex was left unset, then this is part of an invalid mapping
                     // so we should propagate srcArgIndex = -1.
-                    if (srcArgUserIndex >= 0 && srcArgUserIndex < sourceAbi.UserArgumentCount)
+                    if (srcArgUserIndex >= 0 && srcArgUserIndex < sourceUserArgs.Length)
                     {
-                        srcArgIdx = sourceAbi.FirstUserArgument + srcArgUserIndex;
+                        srcArgIdx = sourceUserArgs[srcArgUserIndex];
                     }
                     else
                     {
@@ -366,7 +368,7 @@ namespace MonoMod.Core.Platforms
                 result |= AbiArgumentMapResult.SourceHasUnmappedArguments;
             }
 
-            if (targetAbi.UserArgumentCount < targetFromSourceMappedUserArgs.Length + sourceAbi.UserArgumentCount)
+            if (targetUserArgs < targetFromSourceMappedUserArgs.Length + sourceUserArgs.Length)
             {
                 // some source user arguments are guaranteed to not be mapped
                 result |= AbiArgumentMapResult.SourceHasUnmappedArguments | AbiArgumentMapResult.SourceHasUnmappedUserArguments;
