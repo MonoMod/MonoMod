@@ -296,36 +296,11 @@ namespace MonoMod.Core.Platforms
             // In order to fix this, when getting an identifiable method, we make sure to correct it, by retrieving it directly from its declaring type (or module, as it may be)
             if (method.ReflectedType != method.DeclaringType)
             {
-                var parameters = method.GetParameters();
-                var paramTypes = new Type[parameters.Length];
-                for (var i = 0; i < parameters.Length; i++)
-                {
-                    paramTypes[i] = parameters[i].ParameterType;
-                }
-
-                if (method.DeclaringType is null)
-                {
-                    // the method lives on the module, get it from there
-                    var got = method.Module.GetMethod(method.Name, (BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
-                    Helpers.Assert(got is not null, $"orig: {method}, module: {method.Module}");
-                    method = got;
-                }
-                else
-                {
-                    // the method has a declaring type, get it there
-                    if (method.IsConstructor)
-                    {
-                        var got = method.DeclaringType.GetConstructor((BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
-                        Helpers.Assert(got is not null, $"orig: {method}");
-                        method = got;
-                    }
-                    else
-                    {
-                        var got = method.DeclaringType.GetMethod(method.Name, (BindingFlags)(-1), null, method.CallingConvention, paramTypes, null);
-                        Helpers.Assert(got is not null, $"orig: {method}");
-                        method = got;
-                    }
-                }
+                var got = method.DeclaringType is { } declaringType
+                    ? MethodBase.GetMethodFromHandle(method.MethodHandle, declaringType.TypeHandle)
+                    : MethodBase.GetMethodFromHandle(method.MethodHandle);
+                Helpers.Assert(got is not null, $"orig: {method}");
+                method = got;
             }
 
             return method;
