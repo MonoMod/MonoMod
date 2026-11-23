@@ -24,7 +24,7 @@ General purpose .NET assembly modding "basework", powered by [cecil](https://git
 MonoMod is a modding "basework" (base tools + framework).  
 Mods / mod loaders for the following games are already using it in one way or another:
 - Terraria: [tModLoader](https://github.com/blushiemagic/tModLoader), [TerrariaHooks](https://github.com/0x0ade/TerrariaHooks)
-- Hollow Knight: [HollowKnight.Modding](https://github.com/seanpr96/HollowKnight.Modding)
+- Hollow Knight: [HollowKnight.Modding](https://github.com/hk-modding/api)
 - Celeste: [Everest](https://everestapi.github.io/)
 - Risk of Rain 2: [BepInExPack (BepInEx + MonoMod + R2API)](https://thunderstore.io/package/bbepis/BepInExPack/)
 - Enter the Gungeon: [Mod the Gungeon](https://modthegungeon.github.io/)
