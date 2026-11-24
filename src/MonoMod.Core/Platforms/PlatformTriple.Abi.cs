@@ -133,12 +133,8 @@ namespace MonoMod.Core.Platforms
                 il.Emit(OpCodes.Stobj, il.Body.Method.Module.ImportReference(dst is MethodInfo mi ? mi.ReturnType : typeof(void)));
             }
 
-            // if we're supposed to pop the retbuf, leave through the method which does that
-            if (srcAbi.ReturnBufferArgument >= 0 && Abi.PopReturnBuffer is { } popReturnBuffer)
-            {
-                il.Emit(OpCodes.Jmp, il.Body.Method.Module.ImportReference(popReturnBuffer));
-                return dmd.Generate();
-            }
+            // let the runtime emit whatever its ABI needs for returning
+            Runtime.EmitAbiFixupEpilog(il, srcAbi);
 
             // if we're support to return the retbuf, do so
             if (srcAbi.AbiReturnIsReturnBuffer)

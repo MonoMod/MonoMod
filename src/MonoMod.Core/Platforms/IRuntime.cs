@@ -1,4 +1,5 @@
-﻿using MonoMod.Utils;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Utils;
 using System;
 using System.Reflection;
 
@@ -72,6 +73,13 @@ namespace MonoMod.Core.Platforms
         /// MUST be a valid <see cref="RuntimeMethodHandle"/> corresponding to <paramref name="method"/> if it is specified.</param>
         /// <returns>The <see cref="MethodAbiFlags"/> for the <paramref name="method"/> variant identified by <paramref name="handle"/>.</returns>
         MethodAbiFlags GetMethodAbiFlags(MethodAbiUsage usage, MethodBase method, RuntimeMethodHandle handle = default);
+
+        /// <summary>
+        /// Emits any runtime-specific IL needed to return from an ABI fixup method, if there is any.
+        /// </summary>
+        /// <param name="il">The <see cref="ILProcessor"/> of the ABI fixup method.</param>
+        /// <param name="abi">The <see cref="MethodAbi"/> which the ABI fixup method implements.</param>
+        void EmitAbiFixupEpilog(ILProcessor il, MethodAbi abi);
 
         /// <summary>
         /// Disables inlining for a particular method. After this is called, future invocations of this method will not be inlined at the callsite by the runtime.

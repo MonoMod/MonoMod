@@ -207,6 +207,8 @@ namespace MonoMod.Core.Platforms.Runtimes
             return MethodRequiresGenericContext(method, handle) && usage is MethodAbiUsage.RealMethodBody ? MethodAbiFlags.HasGenericContext : 0;
         }
 
+        public virtual void EmitAbiFixupEpilog(ILProcessor il, MethodAbi abi) { }
+
         protected virtual bool MethodRequiresGenericContext(MethodBase method, RuntimeMethodHandle handle = default)
         {
             // If neither the method nor its declaring type is generic,

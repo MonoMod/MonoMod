@@ -1,6 +1,5 @@
 ﻿using MonoMod.Utils;
 using System;
-using System.Reflection;
 
 namespace MonoMod.Core.Platforms
 {
@@ -98,12 +97,6 @@ namespace MonoMod.Core.Platforms
         /// in <see cref="ArgumentOrder"/> when it is a reference type; <see langword="false"/> otherwise.
         /// </summary>
         public bool ReferenceArgumentTakesThisSlot { get; init; }
-
-        /// <summary>
-        /// The method to jump to in order to return and pop the return buffer pointer off the stack, if functions are expected to do so;
-        /// <see langword="null"/> otherwise.
-        /// </summary>
-        public MethodInfo? PopReturnBuffer { get; init; }
 
         /// <summary>
         /// Classifies a type according to the ABI.

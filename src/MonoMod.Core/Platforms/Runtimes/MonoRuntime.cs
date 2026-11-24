@@ -1,3 +1,4 @@
+using Mono.Cecil.Cil;
 using MonoMod.Backports;
 using MonoMod.Utils;
 using System;
@@ -6,9 +7,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using DynamicMethod = System.Reflection.Emit.DynamicMethod;
 
 namespace MonoMod.Core.Platforms.Runtimes
 {
@@ -28,6 +29,7 @@ namespace MonoMod.Core.Platforms.Runtimes
         public Abi Abi { get; }
 
         private readonly ISystem system;
+        private readonly MethodInfo? popReturnBuffer;
 
         private static TypeClassification LinuxAmd64Classifier(Type type, bool isReturn)
         {
@@ -208,10 +210,9 @@ namespace MonoMod.Core.Platforms.Runtimes
                 {
                     abi = abi with
                     {
-                        Classifier = X86Classifier,
-                        // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-x86.c#L531-L533
-                        PopReturnBuffer = CreatePopReturnBuffer(),
+                        Classifier = X86Classifier
                     };
+                    popReturnBuffer = CreatePopReturnBuffer();
                 }
                 // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
                 if (PlatformDetection.Architecture is ArchitectureKind.x86_64 or ArchitectureKind.x86)
@@ -276,6 +277,15 @@ namespace MonoMod.Core.Platforms.Runtimes
             // callers pass the generic context of shared code in a register, so a detour has to call it instead of jumping to it
             // Mono doesn't support runtimeasync
             return NeedsGenericContext(method) ? MethodAbiFlags.RequiresAbiFixup : 0;
+        }
+
+        public void EmitAbiFixupEpilog(ILProcessor il, MethodAbi abi)
+        {
+            if (popReturnBuffer is null || abi.ReturnBufferArgument < 0)
+                return;
+
+            // #368
+            il.Emit(OpCodes.Jmp, il.Body.Method.Module.ImportReference(popReturnBuffer));
         }
 
         // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-generic-sharing.c#L3502-L3519
