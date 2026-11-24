@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace MonoMod.Core.Platforms.Runtimes
@@ -176,6 +177,18 @@ namespace MonoMod.Core.Platforms.Runtimes
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void PopReturnBuffer() => throw new InvalidOperationException();
+
+        private MethodInfo CreatePopReturnBuffer()
+        {
+            var method = ((Action)PopReturnBuffer).Method;
+            Compile(method);
+            // ret 4
+            system.PatchData(PatchTargetKind.Executable, GetMethodEntryPoint(method), [0xc2, 0x04, 0x00], default);
+            return method;
+        }
+
         public MonoRuntime(ISystem system)
         {
             this.system = system;
@@ -195,7 +208,9 @@ namespace MonoMod.Core.Platforms.Runtimes
                 {
                     abi = abi with
                     {
-                        Classifier = X86Classifier
+                        Classifier = X86Classifier,
+                        // https://github.com/mono/mono/blob/0f53e9e151d92944cacab3e24ac359410c606df6/mono/mini/mini-x86.c#L531-L533
+                        PopReturnBuffer = CreatePopReturnBuffer(),
                     };
                 }
                 // notably, in Mono, the generic context pointer is not an argument in the normal calling convention, but an argument elsewhere (r10 on x64)
