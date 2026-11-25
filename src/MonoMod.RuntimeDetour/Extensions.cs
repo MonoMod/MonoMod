@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace MonoMod.RuntimeDetour
 {
-    internal static class Extensions
+    public static class Extensions
     {
         public static MethodInfo CreateILCopy(this MethodBase method)
         {
