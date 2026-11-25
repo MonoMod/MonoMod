@@ -4,6 +4,7 @@ using MonoMod.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading;
@@ -58,6 +59,8 @@ namespace MonoMod.Core.Platforms
                 return;
             }
 
+            Volatile.Write(ref lastCompiled[EnvironmentEx.CurrentManagedThreadId % lastCompiled.Length], new(methodHandle.Value, codeStart));
+
             method = triple.GetIdentifiable(method);
 
             if (relatedDetours.TryGetValue(method, out var related))
@@ -70,6 +73,33 @@ namespace MonoMod.Core.Platforms
                     }
                 }
             }
+        }
+
+        private sealed class CompiledCode(IntPtr method, IntPtr code)
+        {
+            public readonly IntPtr Method = method;
+            public readonly IntPtr Code = code;
+            public readonly Stopwatch Age = Stopwatch.StartNew();
+        }
+
+        private readonly CompiledCode?[] lastCompiled = new CompiledCode?[64];
+
+        // The runtime only publishes new code some time after OnMethodCompiled returns. Until then, walking the method still
+        // gives the old body, so a detour which missed the compile would never end up on the new code.
+        private bool IsAwaitingPublish(RuntimeMethodHandle method, IntPtr body)
+        {
+            for (var i = 0; i < lastCompiled.Length; i++)
+            {
+                if (i != EnvironmentEx.CurrentManagedThreadId % lastCompiled.Length
+                    && Volatile.Read(ref lastCompiled[i]) is { } compiled
+                    && compiled.Method == method.Value && compiled.Code != body
+                    && compiled.Age.ElapsedMilliseconds < 10)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private sealed class RelatedDetourBag
@@ -514,6 +544,7 @@ namespace MonoMod.Core.Platforms
             public readonly MethodBase RealDstMethod;
 
             private bool walking;
+            private volatile bool recompileWaiting;
 
             private IDisposable? srcPin;
             private IDisposable? dstPin;
@@ -536,7 +567,15 @@ namespace MonoMod.Core.Platforms
 
                 Triple.Compile(SrcMethod, SrcMethodHandle);
                 walking = true;
+                // Not sure if this is necessary
+                Thread.MemoryBarrier();
                 var from = Triple.GetNativeMethodBody(SrcMethod, SrcMethodHandle);
+                // wait for new code to go live, unless its compile callback is waiting for us to finish (it then detours the code itself)
+                while (!recompileWaiting && Factory.IsAwaitingPublish(SrcMethodHandle, from))
+                {
+                    Thread.Sleep(0);
+                    from = Triple.GetNativeMethodBody(SrcMethod, SrcMethodHandle);
+                }
                 Triple.Compile(RealDstMethod, RealDstMethodHandle);
                 var to = RealDstMethodHandle.GetFunctionPointer();
 
@@ -579,6 +618,7 @@ namespace MonoMod.Core.Platforms
                     return;
                 }
 
+                recompileWaiting = true;
                 lock (Sync)
                 {
                     if (!IsApplied)
