@@ -39,6 +39,7 @@ namespace MonoMod.Core.Utils
             MaxMinLength = maxMinLength;
             MaxAddressLength = maxAddrLength;
             Helpers.Assert(MinLength > 0);
+            PossibleFirstBytes = GetPossibleFirstBytes();
         }
 
         /// <summary>
@@ -480,8 +481,7 @@ namespace MonoMod.Core.Utils
             return false;
         }
 
-        private ReadOnlyMemory<byte>? lazyPossibleFirstBytes;
-        private ReadOnlyMemory<byte> PossibleFirstBytes => lazyPossibleFirstBytes ??= GetPossibleFirstBytes();
+        private ReadOnlyMemory<byte> PossibleFirstBytes { get; }
 
         private ReadOnlyMemory<byte> GetPossibleFirstBytes()
         {

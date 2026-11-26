@@ -196,6 +196,17 @@ namespace MonoMod.Core.Platforms.Architectures
                               Bd,   Bd,   Bd,   Bd
                         }
                     ),
+                    // PrecodeFixupThunk (.NET Core 3, arm64)
+                    // https://github.com/dotnet/coreclr/blob/c17d273aa03d4b9d14c92248a91f0d0faa881b98/src/vm/arm64/asmhelpers.S#L145-L160
+                    new BytePattern(new AddressMeaning(AddressKind.PrecodeFixupThunkRel64, relativeOffset: 0),
+                        mustMatchAtStart: true,
+                        0x8d, 0x3d, 0x40, 0x39, // ldrb w13, [x12, #15]
+                        0x8e, 0x39, 0x40, 0x39, // ldrb w14, [x12, #14]
+                        0x8c, 0x4d, 0x2d, 0x8b, // add x12, x12, w13, uxtw #3
+                        0x8d, 0x51, 0x2d, 0x8b, // add x13, x12, w13, uxtw #4
+                        0xad, 0x0d, 0x40, 0xf9, // ldr x13, [x13, #24]
+                        0xac, 0x4d, 0x2e, 0x8b  // add x12, x13, w14, uxtw #3
+                    ),
                 };
 
                 // .NET 7+ Support
@@ -298,7 +309,8 @@ namespace MonoMod.Core.Platforms.Architectures
                     var callCountingStub = callCountingStubCode.ToArray();
                     EncodeLdr64LiteralTo(callCountingStub.AsSpan(0), 0 + pageSize + 0, 9); // .RemainingCallCountCell (+0)
                     EncodeLdr64LiteralTo(callCountingStub.AsSpan(20), -20 + pageSize + 8, 9); // .TargetForMethod (+8)
-                    EncodeLdr64LiteralTo(callCountingStub.AsSpan(28), -28 + pageSize + 16, 9); // .TargetForThresholdReached (+16)
+                    // https://github.com/dotnet/runtime/blob/v7.0.0/src/coreclr/vm/arm64/thunktemplates.S#L35
+                    EncodeLdr64LiteralTo(callCountingStub.AsSpan(28), -28 + pageSize + 16, 10); // .TargetForThresholdReached (+16)
 
                     patterns.Add(new BytePattern(
                         new AddressMeaning(AddressKind.Rel64 | AddressKind.ConstantAddr | AddressKind.Indirect, relativeOffset: 0, constantValue: (uint)pageSize + 8),
